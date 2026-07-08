@@ -91,6 +91,19 @@ def mark_processed(
     typer.echo(f"processed {capture_id}")
 
 
+@app.command()
+def derive(directory: DirOpt = None) -> None:
+    """Rebuild derived state: open-loops.md/.json and entities.json (idempotent)."""
+    from vault.derive import derive as run_derive
+
+    summary = run_derive(_dir(directory))
+    typer.echo(
+        f"stamped {summary['stamped']} hand-written loops; "
+        f"{summary['loops_open']} open ({summary['loops_stale']} stale); "
+        f"{summary['entities']} entities indexed"
+    )
+
+
 def main() -> None:
     app()
 
