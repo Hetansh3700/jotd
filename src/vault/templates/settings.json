@@ -14,7 +14,11 @@
       "Bash(vault mark-processed:*)",
       "Bash(vault derive:*)",
       "Bash(vault status:*)",
-      "Bash(vault log:*)"
+      "Bash(vault log:*)",
+      "Bash(vault pulse:*)",
+      "Bash(vault done:*)",
+      "Bash(vault snooze:*)",
+      "Bash(vault drop:*)"
     ]
   }
 }

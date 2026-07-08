@@ -54,3 +54,32 @@ judgment varies legitimately and the cost of extra links is low. Loop `owner` la
 fixtures (documentation + future use) but not graded: owner extraction is a text convention the
 librarian applies, and grading it would be brittle before the convention has dogfood mileage.
 Revisit both with eval data in v0.3.
+
+## D5 — The interruption budget lives in code; the model only reasons inside it
+
+The runner computes `min(per_run, per_day − already_sent_today)` from the pulse-log BEFORE
+invoking the model, pre-filters silenced (two drops) and snoozed loops out of the packet
+(the model structurally cannot renudge what it never sees), then hard-truncates the model's
+nudges to the budget and rejects hallucinated/duplicate loop ids — runner rejections are
+logged as `suppress ... reason="runner: ..."` lines, so even the enforcement layer's
+decisions are auditable. The prompt restates the budget only so the model's suppression
+reasoning reads coherently.
+
+## D6 — pulse-log.md is a one-line-per-event grammar with a round-trip write guard
+
+The spec's headline artifact ("an agent that logs why it chose silence") must be readable
+raw AND machine-foldable. One event per line, strict regex grammar, `pulselog.py` is the
+sole writer via O_APPEND; free text is sanitized (quotes→apostrophes, newlines flattened)
+and every event is re-parsed before it is appended — an unparseable event raises instead of
+corrupting the log. Loop status (done/snoozed/silenced) is always FOLDED from events at
+derive time, never stored, so the log is the single source of truth.
+
+## D7 — launchd headless auth: verified, keychain-backed, no API key on disk (2026-07-08)
+
+`vault schedule install` bootstraps into `gui/$UID` (the login-keychain domain);
+a `launchctl kickstart` of the morning slot ran the full pulse — claude auth, model call,
+brief written, notification delivered — with zero extra configuration. The
+`ANTHROPIC_API_KEY`-in-plist fallback stays documented but off by default. Also verified:
+headless claude ignores workspace `permissions.allow` in untrusted dirs (denies still
+apply), so the eval harness grants the vault CLI via `--allowedTools` flags and real users
+accept the trust dialog once (docs/headless-notes.md).
