@@ -18,9 +18,9 @@ NOW = datetime(2026, 7, 8, 14, 32, 5)
 
 
 def test_capture_roundtrip():
-    rec = new_capture("call sarah", now=NOW, rand_hex="3f2a99", context={"cwd": "~/x"})
+    rec = new_capture("call sarah", now=NOW, rand_hex="3f2a99c1e0", context={"cwd": "~/x"})
     assert CAPTURE_ID_RE.match(rec["id"])
-    assert rec["id"] == "cap-20260708-143205-3f2a"
+    assert rec["id"] == "cap-20260708-143205-3f2a99c1"
     line = dump_capture_line(rec)
     assert line.endswith("\n") and line.count("\n") == 1
     assert parse_capture_line(line) == rec

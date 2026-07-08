@@ -66,6 +66,7 @@ def scaffold(
     git: bool = True,
     upgrade: bool = False,
     set_default: bool = False,
+    pointer: bool = True,
     today: str | None = None,
 ) -> list[str]:
     """Create/upgrade the data dir. Returns human-readable action lines."""
@@ -112,15 +113,16 @@ def scaffold(
         subprocess.run(["git", "init", "-q", "-b", "main"], cwd=data_dir, check=False)
         actions.append("git init (your notes stay local unless you add a private remote)")
 
-    if set_default or not POINTER_FILE.exists():
-        POINTER_FILE.parent.mkdir(parents=True, exist_ok=True)
-        POINTER_FILE.write_text(str(data_dir) + "\n", encoding="utf-8")
-        actions.append(f"default vault -> {data_dir}")
-    elif POINTER_FILE.read_text(encoding="utf-8").strip() != str(data_dir):
-        actions.append(
-            f"note: default vault is {POINTER_FILE.read_text().strip()} "
-            "(rerun with --set-default to switch)"
-        )
+    if pointer:
+        if set_default or not POINTER_FILE.exists():
+            POINTER_FILE.parent.mkdir(parents=True, exist_ok=True)
+            POINTER_FILE.write_text(str(data_dir) + "\n", encoding="utf-8")
+            actions.append(f"default vault -> {data_dir}")
+        elif POINTER_FILE.read_text(encoding="utf-8").strip() != str(data_dir):
+            actions.append(
+                f"note: default vault is {POINTER_FILE.read_text().strip()} "
+                "(rerun with --set-default to switch)"
+            )
 
     foreign = _foreign_vault_binary()
     if foreign:

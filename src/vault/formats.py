@@ -17,7 +17,9 @@ from typing import Any
 # Oversize captures are rejected, never truncated — silent truncation corrupts provenance.
 MAX_CAPTURE_BYTES = 4096
 
-CAPTURE_ID_RE = re.compile(r"^cap-\d{8}-\d{6}-[0-9a-f]{4}$")
+# 8 hex chars of randomness: burst captures share the timestamp second, and the
+# suffix alone must keep birthday collisions negligible (4 hex ≈ 30% at 200/s).
+CAPTURE_ID_RE = re.compile(r"^cap-\d{8}-\d{6}-[0-9a-f]{8}$")
 
 # Loop lines inside notes:  - [ ] text <!-- loop:ID -->   (or "- [x]" once done).
 # ID is either the capture id that spawned the loop (stamped by the librarian) or
@@ -33,7 +35,7 @@ PROCESSED_LINE_RE = re.compile(r"^(?P<id>cap-[\w-]+) (?P<paths>\S+) (?P<ts>\S+)$
 
 
 def new_capture_id(now: datetime, rand_hex: str) -> str:
-    return f"cap-{now.strftime('%Y%m%d-%H%M%S')}-{rand_hex[:4]}"
+    return f"cap-{now.strftime('%Y%m%d-%H%M%S')}-{rand_hex[:8]}"
 
 
 def new_capture(

@@ -36,15 +36,22 @@ CLAUDE_ARGS = [
     "json",
     "--max-turns",
     "250",
+    # The temp vault is an untrusted workspace, so headless claude ignores the
+    # permissions.allow entries in its .claude/settings.json (the deny rules
+    # still apply). Grant the vault CLI explicitly — CLI flags express caller
+    # intent and are honored regardless of workspace trust.
+    "--allowedTools",
+    "Bash(vault unprocessed:*)",
+    "Bash(vault mark-processed:*)",
+    "Bash(vault derive:*)",
 ]
 
 
 def build_eval_vault(tmp: Path) -> list[dict]:
+    from vault import inbox
     from vault.init import scaffold
 
-    from vault import inbox
-
-    scaffold(tmp, git=False)
+    scaffold(tmp, git=False, pointer=False)
     shutil.copytree(EVALS / "fixtures" / "seed-vault" / "notes", tmp / "notes", dirs_exist_ok=True)
 
     fixtures = [

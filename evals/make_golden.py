@@ -89,7 +89,7 @@ def main() -> None:
     for i, fx in enumerate(fixtures):
         ts = f"{DAY}T09:{i:02d}:00-07:00"
         record = {
-            "id": f"cap-20260707-09{i:02d}00-{i:04x}",
+            "id": f"cap-20260707-09{i:02d}00-{i:08x}",
             "ts": ts,
             "text": fx["text"],
             "source": "cli",
