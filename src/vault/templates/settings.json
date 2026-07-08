@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "deny": [
+      "Edit(./inbox/**)",
+      "Write(./inbox/**)",
+      "Edit(./state/**)",
+      "Write(./state/**)",
+      "Edit(./vault.toml)",
+      "Write(./vault.toml)"
+    ],
+    "allow": [
+      "Bash(vault add:*)",
+      "Bash(vault unprocessed:*)",
+      "Bash(vault mark-processed:*)",
+      "Bash(vault derive:*)",
+      "Bash(vault status:*)",
+      "Bash(vault log:*)"
+    ]
+  }
+}

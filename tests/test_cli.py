@@ -1,0 +1,52 @@
+import json
+
+from typer.testing import CliRunner
+
+from vault import init as vinit
+from vault.cli import app
+
+runner = CliRunner()
+
+
+def make_vault(tmp_path, monkeypatch):
+    monkeypatch.setattr(vinit, "POINTER_FILE", tmp_path / "pointer")
+    target = tmp_path / "v"
+    result = runner.invoke(app, ["init", str(target), "--no-git"])
+    assert result.exit_code == 0, result.output
+    return target
+
+
+def test_init_add_unprocessed_mark_roundtrip(tmp_path, monkeypatch):
+    target = make_vault(tmp_path, monkeypatch)
+
+    result = runner.invoke(app, ["add", "call sarah about atlas", "--dir", str(target)])
+    assert result.exit_code == 0, result.output
+    cap_id = result.output.strip()
+    assert cap_id.startswith("cap-")
+
+    result = runner.invoke(app, ["unprocessed", "--json", "--dir", str(target)])
+    records = json.loads(result.output)
+    assert [r["id"] for r in records] == [cap_id]
+
+    result = runner.invoke(
+        app, ["mark-processed", cap_id, "notes/topics/unsorted.md", "--dir", str(target)]
+    )
+    assert result.exit_code == 0, result.output
+
+    result = runner.invoke(app, ["unprocessed", "--dir", str(target)])
+    assert "inbox clear" in result.output
+
+
+def test_add_refuses_outside_a_vault(tmp_path):
+    result = runner.invoke(app, ["add", "hello", "--dir", str(tmp_path / "nowhere")])
+    assert result.exit_code == 2
+    assert "not a vault" in result.output
+
+
+def test_mark_processed_errors_are_friendly(tmp_path, monkeypatch):
+    target = make_vault(tmp_path, monkeypatch)
+    result = runner.invoke(
+        app, ["mark-processed", "cap-20990101-000000-dead", "notes/x.md", "--dir", str(target)]
+    )
+    assert result.exit_code == 1
+    assert "unknown capture id" in result.output

@@ -1,0 +1,16 @@
+# vault configuration — see https://github.com/hetanshpatel/vault
+# The pulse defaults are deliberately conservative. Loosen them only after a
+# couple of weeks of dogfood; proactive agents die by noise, not by silence.
+
+[pulse]
+max_nudges_per_run = 3
+max_nudges_per_day = 6
+stale_after_days = 4
+snooze_days = 3
+model = "sonnet"
+channel = "macos" # macos | stdout
+
+[pulse.slots]
+morning = "09:00"
+midday = "13:30"
+evening = "17:30"
