@@ -1,0 +1,328 @@
+{
+ "n": 28,
+ "routing_hits": 26,
+ "routing_accuracy": 0.9286,
+ "loops_expected": 7,
+ "loops_found": 6,
+ "loop_recall": 0.8571,
+ "loops_stamped": 6,
+ "loop_precision": 1.0,
+ "inbox_intact": true,
+ "processed_complete": true,
+ "per_capture": [
+  {
+   "id": "cap-20260707-090000-0000",
+   "class": "person",
+   "text": "sarah is out thursday and friday, her mom's visiting",
+   "ok": true,
+   "routed": [
+    "notes/people/sarah-chen.md"
+   ],
+   "missing": [],
+   "loop_ok": null
+  },
+  {
+   "id": "cap-20260707-090100-0001",
+   "class": "person",
+   "text": "marcus got promoted to staff, announcement goes out friday",
+   "ok": true,
+   "routed": [
+    "notes/people/marcus-webb.md"
+   ],
+   "missing": [],
+   "loop_ok": null
+  },
+  {
+   "id": "cap-20260707-090200-0002",
+   "class": "person",
+   "text": "priya mentioned she's thinking about moving to the platform ",
+   "ok": true,
+   "routed": [
+    "notes/people/priya-nair.md"
+   ],
+   "missing": [],
+   "loop_ok": null
+  },
+  {
+   "id": "cap-20260707-090300-0003",
+   "class": "person-alias",
+   "text": "schen prefers async updates over meetings, she's told me twi",
+   "ok": false,
+   "routed": [
+    "notes/topics/unsorted.md"
+   ],
+   "missing": [
+    "people/sarah-chen"
+   ],
+   "loop_ok": null
+  },
+  {
+   "id": "cap-20260707-090400-0004",
+   "class": "person-new",
+   "text": "met dana ross from the data team today, she owns the warehou",
+   "ok": true,
+   "routed": [
+    "notes/people/dana-ross.md"
+   ],
+   "missing": [],
+   "loop_ok": null
+  },
+  {
+   "id": "cap-20260707-090500-0005",
+   "class": "project",
+   "text": "atlas p99 latency dropped to 180ms after the connection pool",
+   "ok": true,
+   "routed": [
+    "notes/projects/atlas.md"
+   ],
+   "missing": [],
+   "loop_ok": null
+  },
+  {
+   "id": "cap-20260707-090600-0006",
+   "class": "project",
+   "text": "helios dark mode shipped behind a flag, rollout starts next ",
+   "ok": true,
+   "routed": [
+    "notes/projects/helios.md"
+   ],
+   "missing": [],
+   "loop_ok": null
+  },
+  {
+   "id": "cap-20260707-090700-0007",
+   "class": "project",
+   "text": "the atlas rate limiter is moving to the gateway, backend tea",
+   "ok": true,
+   "routed": [
+    "notes/projects/atlas.md"
+   ],
+   "missing": [],
+   "loop_ok": null
+  },
+  {
+   "id": "cap-20260707-090800-0008",
+   "class": "project",
+   "text": "helios usability test: 4 of 5 users couldn't find the export",
+   "ok": true,
+   "routed": [
+    "notes/projects/helios.md"
+   ],
+   "missing": [],
+   "loop_ok": null
+  },
+  {
+   "id": "cap-20260707-090900-0009",
+   "class": "project",
+   "text": "we're killing the atlas graphql experiment, rest only from h",
+   "ok": true,
+   "routed": [
+    "notes/projects/atlas.md"
+   ],
+   "missing": [],
+   "loop_ok": null
+  },
+  {
+   "id": "cap-20260707-091000-000a",
+   "class": "topic",
+   "text": "idea: the embeddings dedupe pass could also power a related-",
+   "ok": true,
+   "routed": [
+    "notes/topics/embeddings.md"
+   ],
+   "missing": [],
+   "loop_ok": null
+  },
+  {
+   "id": "cap-20260707-091100-000b",
+   "class": "topic",
+   "text": "the staff-plus book everyone keeps recommending: the staff e",
+   "ok": true,
+   "routed": [
+    "notes/topics/reading-list.md"
+   ],
+   "missing": [],
+   "loop_ok": null
+  },
+  {
+   "id": "cap-20260707-091200-000c",
+   "class": "topic",
+   "text": "hiring thought: ask candidates to review a real PR instead o",
+   "ok": true,
+   "routed": [
+    "notes/topics/hiring.md"
+   ],
+   "missing": [],
+   "loop_ok": null
+  },
+  {
+   "id": "cap-20260707-091300-000d",
+   "class": "topic-new",
+   "text": "shower thought: agent UIs need an interruption budget the wa",
+   "ok": true,
+   "routed": [
+    "notes/topics/agent-interruption-budget.md"
+   ],
+   "missing": [],
+   "loop_ok": null
+  },
+  {
+   "id": "cap-20260707-091400-000e",
+   "class": "action-own",
+   "text": "todo: send sarah the q3 atlas numbers before thursday",
+   "ok": true,
+   "routed": [
+    "notes/people/sarah-chen.md"
+   ],
+   "missing": [],
+   "loop_ok": true
+  },
+  {
+   "id": "cap-20260707-091500-000f",
+   "class": "action-own",
+   "text": "need to renew the atlas pagerduty rotation before end of mon",
+   "ok": true,
+   "routed": [
+    "notes/projects/atlas.md"
+   ],
+   "missing": [],
+   "loop_ok": true
+  },
+  {
+   "id": "cap-20260707-091600-0010",
+   "class": "action-own",
+   "text": "todo: review priya's figma file for the helios empty states",
+   "ok": true,
+   "routed": [
+    "notes/projects/helios.md"
+   ],
+   "missing": [],
+   "loop_ok": true
+  },
+  {
+   "id": "cap-20260707-091700-0011",
+   "class": "action-own",
+   "text": "i owe marcus a decision on the terraform module split",
+   "ok": true,
+   "routed": [
+    "notes/people/marcus-webb.md"
+   ],
+   "missing": [],
+   "loop_ok": true
+  },
+  {
+   "id": "cap-20260707-091800-0012",
+   "class": "action-own-nohome",
+   "text": "book flights for the november offsite before prices jump",
+   "ok": true,
+   "routed": [
+    "notes/topics/unsorted.md"
+   ],
+   "missing": [],
+   "loop_ok": true
+  },
+  {
+   "id": "cap-20260707-091900-0013",
+   "class": "action-theirs",
+   "text": "sarah owes me the atlas security review sign-off by wednesda",
+   "ok": true,
+   "routed": [
+    "notes/people/sarah-chen.md"
+   ],
+   "missing": [],
+   "loop_ok": true
+  },
+  {
+   "id": "cap-20260707-092000-0014",
+   "class": "action-theirs",
+   "text": "marcus said he'd send the infra cost breakdown this week",
+   "ok": true,
+   "routed": [
+    "notes/people/marcus-webb.md"
+   ],
+   "missing": [],
+   "loop_ok": false
+  },
+  {
+   "id": "cap-20260707-092100-0015",
+   "class": "fanout",
+   "text": "marcus is taking over atlas on-call from me starting next sp",
+   "ok": true,
+   "routed": [
+    "notes/people/marcus-webb.md",
+    "notes/projects/atlas.md"
+   ],
+   "missing": [],
+   "loop_ok": null
+  },
+  {
+   "id": "cap-20260707-092200-0016",
+   "class": "fanout",
+   "text": "sarah wants the helios beta list trimmed to 20 customers",
+   "ok": false,
+   "routed": [
+    "notes/projects/helios.md"
+   ],
+   "missing": [
+    "people/sarah-chen"
+   ],
+   "loop_ok": null
+  },
+  {
+   "id": "cap-20260707-092300-0017",
+   "class": "fanout",
+   "text": "priya's design system audit is blocking the atlas admin ui r",
+   "ok": true,
+   "routed": [
+    "notes/people/priya-nair.md",
+    "notes/projects/atlas.md"
+   ],
+   "missing": [],
+   "loop_ok": null
+  },
+  {
+   "id": "cap-20260707-092400-0018",
+   "class": "ambiguous",
+   "text": "the thing from standup about caching",
+   "ok": true,
+   "routed": [
+    "notes/topics/unsorted.md"
+   ],
+   "missing": [],
+   "loop_ok": null
+  },
+  {
+   "id": "cap-20260707-092500-0019",
+   "class": "ambiguous",
+   "text": "check the numbers again",
+   "ok": true,
+   "routed": [
+    "notes/topics/unsorted.md"
+   ],
+   "missing": [],
+   "loop_ok": null
+  },
+  {
+   "id": "cap-20260707-092600-001a",
+   "class": "ambiguous",
+   "text": "blue?? maybe green actually",
+   "ok": true,
+   "routed": [
+    "notes/topics/unsorted.md"
+   ],
+   "missing": [],
+   "loop_ok": null
+  },
+  {
+   "id": "cap-20260707-092700-001b",
+   "class": "ambiguous",
+   "text": "that podcast point about maintenance vs novelty",
+   "ok": true,
+   "routed": [
+    "notes/topics/unsorted.md"
+   ],
+   "missing": [],
+   "loop_ok": null
+  }
+ ]
+}

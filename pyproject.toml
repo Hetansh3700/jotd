@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vault-brain"
+version = "0.2.0"
+description = "A proactive notes brain for Claude Code: capture instantly, let an agent organize, and get nudged about what matters — under a strict interruption budget with logged suppressions."
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.11"
+authors = [{ name = "Hetansh Patel" }]
+keywords = ["notes", "pkm", "claude-code", "agents", "proactive", "second-brain"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Office/Business :: News/Diary",
+]
+dependencies = [
+    "typer>=0.12",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.5", "mypy>=1.10", "build", "twine"]
+
+[project.scripts]
+vault = "vault.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/hetanshpatel/vault"
+Issues = "https://github.com/hetanshpatel/vault/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+vault = ["py.typed", "templates/**/*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]

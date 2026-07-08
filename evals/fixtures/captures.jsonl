@@ -1,0 +1,28 @@
+{"text": "sarah is out thursday and friday, her mom's visiting", "expect": {"targets": ["people/sarah-chen"], "loop": false, "class": "person"}}
+{"text": "marcus got promoted to staff, announcement goes out friday", "expect": {"targets": ["people/marcus-webb"], "loop": false, "class": "person"}}
+{"text": "priya mentioned she's thinking about moving to the platform team next quarter", "expect": {"targets": ["people/priya-nair"], "loop": false, "class": "person"}}
+{"text": "schen prefers async updates over meetings, she's told me twice now", "expect": {"targets": ["people/sarah-chen"], "loop": false, "class": "person-alias"}}
+{"text": "met dana ross from the data team today, she owns the warehouse migration", "expect": {"targets": ["people/*"], "loop": false, "class": "person-new"}}
+{"text": "atlas p99 latency dropped to 180ms after the connection pooling fix", "expect": {"targets": ["projects/atlas"], "loop": false, "class": "project"}}
+{"text": "helios dark mode shipped behind a flag, rollout starts next week", "expect": {"targets": ["projects/helios"], "loop": false, "class": "project"}}
+{"text": "the atlas rate limiter is moving to the gateway, backend team owns it now", "expect": {"targets": ["projects/atlas"], "loop": false, "class": "project"}}
+{"text": "helios usability test: 4 of 5 users couldn't find the export button", "expect": {"targets": ["projects/helios"], "loop": false, "class": "project"}}
+{"text": "we're killing the atlas graphql experiment, rest only from here", "expect": {"targets": ["projects/atlas"], "loop": false, "class": "project"}}
+{"text": "idea: the embeddings dedupe pass could also power a related-notes sidebar", "expect": {"targets": ["topics/embeddings"], "loop": false, "class": "topic"}}
+{"text": "the staff-plus book everyone keeps recommending: the staff engineer's path, tanya reilly", "expect": {"targets": ["topics/reading-list"], "loop": false, "class": "topic"}}
+{"text": "hiring thought: ask candidates to review a real PR instead of doing leetcode", "expect": {"targets": ["topics/hiring"], "loop": false, "class": "topic"}}
+{"text": "shower thought: agent UIs need an interruption budget the way phones needed do-not-disturb", "expect": {"targets": ["topics/*"], "loop": false, "class": "topic-new"}}
+{"text": "todo: send sarah the q3 atlas numbers before thursday", "expect": {"targets": ["people/sarah-chen"], "loop": true, "owner": "me", "class": "action-own"}}
+{"text": "need to renew the atlas pagerduty rotation before end of month", "expect": {"targets": ["projects/atlas"], "loop": true, "owner": "me", "class": "action-own"}}
+{"text": "todo: review priya's figma file for the helios empty states", "expect": {"targets": ["projects/helios"], "loop": true, "owner": "me", "class": "action-own"}}
+{"text": "i owe marcus a decision on the terraform module split", "expect": {"targets": ["people/marcus-webb"], "loop": true, "owner": "me", "class": "action-own"}}
+{"text": "book flights for the november offsite before prices jump", "expect": {"targets": ["topics/unsorted"], "loop": true, "owner": "me", "class": "action-own-nohome"}}
+{"text": "sarah owes me the atlas security review sign-off by wednesday", "expect": {"targets": ["people/sarah-chen"], "loop": true, "owner": "sarah", "class": "action-theirs"}}
+{"text": "marcus said he'd send the infra cost breakdown this week", "expect": {"targets": ["people/marcus-webb"], "loop": true, "owner": "marcus", "class": "action-theirs"}}
+{"text": "marcus is taking over atlas on-call from me starting next sprint", "expect": {"targets": ["people/marcus-webb", "projects/atlas"], "loop": false, "class": "fanout"}}
+{"text": "sarah wants the helios beta list trimmed to 20 customers", "expect": {"targets": ["people/sarah-chen", "projects/helios"], "loop": false, "class": "fanout"}}
+{"text": "priya's design system audit is blocking the atlas admin ui refresh", "expect": {"targets": ["people/priya-nair", "projects/atlas"], "loop": false, "class": "fanout"}}
+{"text": "the thing from standup about caching", "expect": {"targets": ["topics/unsorted"], "loop": false, "class": "ambiguous"}}
+{"text": "check the numbers again", "expect": {"targets": ["topics/unsorted"], "loop": false, "class": "ambiguous"}}
+{"text": "blue?? maybe green actually", "expect": {"targets": ["topics/unsorted"], "loop": false, "class": "ambiguous"}}
+{"text": "that podcast point about maintenance vs novelty", "expect": {"targets": ["topics/unsorted"], "loop": false, "class": "ambiguous"}}
