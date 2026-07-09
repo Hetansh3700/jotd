@@ -98,3 +98,24 @@ a generic capacity plan to atlas via its title, and the title-mislead fixture fo
 the text to atlas over a #helios-launch window title. 36/37 routing, 9/9 loop recall.
 Fixture texts are synthetic but noise-modeled (UI chrome, OCR hyphenation, dot-leaders);
 capture-quality ground truth belongs to evals/capture/, not this set.
+
+## D9 — Tier A screen capture: the TCC-minimal pipeline, and two OCR field findings (2026-07-08)
+
+The client is `screencapture -i` → one-shot Swift Vision helper → `vault capture` — the
+helper never requests any permission. The only TCC prompt in the pipeline belongs to
+Apple's own screencapture binary, attributed to the launcher (Raycast/Terminal); the
+helper inherits that grant for window-title reads (CGWindowList silently omits names
+when ungranted — it never prompts), Vision-on-a-file and NSWorkspace need nothing. So
+none of the noteit traps apply: no embedded Info.plist, no NSApplication bootstrap, no
+CGPreflight tri-state. Verified live: window capture by id → 1,464 chars OCR'd with
+correct app/title attribution; pulse run + 20 parallel `vault capture` subprocesses →
+append-only inbox, 20 unique ids, zero torn lines.
+
+Field findings baked into the code:
+1. **Vision reads on-screen password bullets (••••) as PERIODS.** A bullet-character
+   regex alone never fires on real OCR output, and bare dot-runs can't be dropped
+   (terminal dot-leaders are content) — redaction drops lines with literal bullet runs
+   OR "password" followed by any masked run ([•●.*]{4,}).
+2. **Text on a transparent background OCRs as blank** (composited on black). The helper
+   flattens alpha onto white before recognition; the committed two-col.pdf asset draws
+   an explicit white page fill for the same reason.

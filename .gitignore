@@ -9,3 +9,4 @@ build/
 .mypy_cache/
 .DS_Store
 evals/results/*.local.*
+contrib/screen-capture/bin/
