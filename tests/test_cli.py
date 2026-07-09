@@ -37,6 +37,47 @@ def test_init_add_unprocessed_mark_roundtrip(tmp_path, monkeypatch):
     assert "inbox clear" in result.output
 
 
+def test_capture_context_roundtrip(tmp_path, monkeypatch):
+    target = make_vault(tmp_path, monkeypatch)
+    result = runner.invoke(
+        app,
+        [
+            "capture",
+            "-",
+            "--app",
+            "Preview",
+            "--title",
+            "atlas-plan.pdf — Page 3",
+            "--method",
+            "region",
+            "--dir",
+            str(target),
+        ],
+        input="Scaling the write path is the biggest Q3 risk.\n",
+    )
+    assert result.exit_code == 0, result.output
+    records = json.loads(runner.invoke(app, ["unprocessed", "--json", "--dir", str(target)]).output)
+    (record,) = records
+    assert record["source"] == "screen"
+    assert record["context"] == {
+        "app": "Preview",
+        "title": "atlas-plan.pdf — Page 3",
+        "method": "region",
+    }
+    assert record["text"] == "Scaling the write path is the biggest Q3 risk."
+
+
+def test_capture_without_flags_has_no_context(tmp_path, monkeypatch):
+    target = make_vault(tmp_path, monkeypatch)
+    result = runner.invoke(app, ["capture", "hello", "--dir", str(target)])
+    assert result.exit_code == 0, result.output
+    (record,) = json.loads(
+        runner.invoke(app, ["unprocessed", "--json", "--dir", str(target)]).output
+    )
+    assert record["source"] == "screen"
+    assert "context" not in record
+
+
 def test_add_refuses_outside_a_vault(tmp_path):
     result = runner.invoke(app, ["add", "hello", "--dir", str(tmp_path / "nowhere")])
     assert result.exit_code == 2

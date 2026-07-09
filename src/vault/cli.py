@@ -42,6 +42,23 @@ def init(
     typer.echo(f"vault ready: {target}")
 
 
+def _append(
+    text: list[str] | None,
+    source: str,
+    context: dict[str, str] | None,
+    directory: Path | None,
+) -> None:
+    joined = " ".join(text) if text else ""
+    if not joined or joined == "-":
+        joined = sys.stdin.read()
+    try:
+        record = inbox.append_capture(_dir(directory), joined, source=source, context=context)
+    except (inbox.VaultError, ValueError) as e:
+        typer.echo(f"error: {e}", err=True)
+        raise typer.Exit(1) from None
+    typer.echo(record["id"])
+
+
 @app.command()
 def add(
     text: Annotated[list[str] | None, typer.Argument()] = None,
@@ -49,15 +66,26 @@ def add(
     directory: DirOpt = None,
 ) -> None:
     """Append a capture to the inbox (append-only; reads stdin when no TEXT or TEXT is '-')."""
-    joined = " ".join(text) if text else ""
-    if not joined or joined == "-":
-        joined = sys.stdin.read()
-    try:
-        record = inbox.append_capture(_dir(directory), joined, source=source)
-    except (inbox.VaultError, ValueError) as e:
-        typer.echo(f"error: {e}", err=True)
-        raise typer.Exit(1) from None
-    typer.echo(record["id"])
+    _append(text, source, None, directory)
+
+
+@app.command()
+def capture(
+    text: Annotated[list[str] | None, typer.Argument()] = None,
+    source: Annotated[str, typer.Option()] = "screen",
+    app_name: Annotated[str | None, typer.Option("--app", help="frontmost app name")] = None,
+    title: Annotated[str | None, typer.Option(help="window title, if known")] = None,
+    method: Annotated[str | None, typer.Option(help="region|window|fullscreen|ax")] = None,
+    directory: DirOpt = None,
+) -> None:
+    """Append a capture with source metadata (for capture clients like screen OCR).
+
+    Same append path as `add` — metadata lands in the record's `context` and reaches
+    the librarian as a routing HINT via `vault unprocessed --json`. Clients should
+    pipe text via stdin (TEXT of '-') to avoid argv quoting hazards.
+    """
+    context = {k: v for k, v in (("app", app_name), ("title", title), ("method", method)) if v}
+    _append(text, source, context or None, directory)
 
 
 @app.command()
