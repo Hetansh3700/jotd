@@ -3,3 +3,4 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "evals"))
+sys.path.insert(0, str(REPO / "evals" / "capture"))
