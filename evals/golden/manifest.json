@@ -428,5 +428,188 @@
    "loop": false,
    "class": "ambiguous"
   }
+ },
+ {
+  "record": {
+   "id": "cap-20260707-092800-0000001c",
+   "ts": "2026-07-07T09:28:00-07:00",
+   "text": "Being a staff engineer is not a purely tech- nical role. Much of the job is about being seen as a leader: writing things down, choosing prob- lems the organization actually needs solved rather than the ones that are most fun, and finding the places where a conversation now saves a quarter of rework later.",
+   "source": "screen",
+   "context": {
+    "app": "Preview",
+    "title": "the-staff-engineers-path.pdf \u2014 Page 84",
+    "method": "region"
+   }
+  },
+  "expect": {
+   "targets": [
+    "topics/reading-list"
+   ],
+   "loop": false,
+   "class": "screen-pdf"
+  }
+ },
+ {
+  "record": {
+   "id": "cap-20260707-092900-0000001d",
+   "ts": "2026-07-07T09:29:00-07:00",
+   "text": "As the corpus grows, near-duplicate vectors begin to dominate nearest-neighbor results. Adding a periodic dedupe pass over the embedding space - clustering at cosine similarity above 0.97 and keeping one centroid per cluster - restored recall@10 by 14 points on our internal benchmark. Sign up for our newsletter Subscribe 47 comments Share",
+   "source": "screen",
+   "context": {
+    "app": "Safari",
+    "title": "Why your embedding index degrades over time | eng blog",
+    "method": "region"
+   }
+  },
+  "expect": {
+   "targets": [
+    "topics/embeddings"
+   ],
+   "loop": false,
+   "class": "screen-article"
+  }
+ },
+ {
+  "record": {
+   "id": "cap-20260707-093000-0000001e",
+   "ts": "2026-07-07T09:30:00-07:00",
+   "text": "Sarah Chen 2:14 PM can you get me the trimmed helios beta list before thursday? invites go out friday morning \ud83d\udc4d 1 Reply in thread Also send Sarah Chen a message",
+   "source": "screen",
+   "context": {
+    "app": "Slack",
+    "title": "Sarah Chen (DM) \u2014 Slack",
+    "method": "window"
+   }
+  },
+  "expect": {
+   "targets": [
+    "people/sarah-chen",
+    "projects/helios"
+   ],
+   "loop": true,
+   "owner": "me",
+   "class": "screen-slack-fanout-loop"
+  }
+ },
+ {
+  "record": {
+   "id": "cap-20260707-093100-0000001f",
+   "ts": "2026-07-07T09:31:00-07:00",
+   "text": "Scaling the write path remains the biggest capacity risk going into Q3. Current headroom is roughly 40% at peak; the proposal adds two read replicas per region and moves batch reindexing off-peak, pending platform review before the August freeze.",
+   "source": "screen",
+   "context": {
+    "app": "Preview",
+    "title": "atlas-q3-capacity-plan.pdf",
+    "method": "region"
+   }
+  },
+  "expect": {
+   "targets": [
+    "projects/atlas"
+   ],
+   "loop": false,
+   "class": "screen-hint-follow"
+  }
+ },
+ {
+  "record": {
+   "id": "cap-20260707-093200-00000020",
+   "ts": "2026-07-07T09:32:00-07:00",
+   "text": "devon 11:03 AM the atlas rate limiter cutover finished last night, gateway team owns the config now, p99 held at 181ms through the switch \ud83c\udf89 3 replies Last reply today at 11:40 AM",
+   "source": "screen",
+   "context": {
+    "app": "Slack",
+    "title": "#helios-launch \u2014 Slack",
+    "method": "window"
+   }
+  },
+  "expect": {
+   "targets": [
+    "projects/atlas"
+   ],
+   "loop": false,
+   "class": "screen-title-mislead"
+  }
+ },
+ {
+  "record": {
+   "id": "cap-20260707-093300-00000021",
+   "ts": "2026-07-07T09:33:00-07:00",
+   "text": "npm ERR! code ERESOLVE npm ERR! ERESOLVE unable to resolve dependency tree npm ERR! While resolving: web@0.1.0 npm ERR! Found: react@18.3.1 npm ERR! node_modules/react npm ERR! peer react@\"^17.0.2\" from @internal/ui-kit@2.4.1 npm ERR! A complete log of this run can be found in: /Users/h/.npm/_logs/2026-07-08T18_42_07_339Z-debug-0.log",
+   "source": "screen",
+   "context": {
+    "app": "Terminal",
+    "title": "zsh \u2014 92\u00d734",
+    "method": "region"
+   }
+  },
+  "expect": {
+   "targets": [
+    "topics/unsorted"
+   ],
+   "loop": false,
+   "class": "screen-terminal-noise"
+  }
+ },
+ {
+  "record": {
+   "id": "cap-20260707-093400-00000022",
+   "ts": "2026-07-07T09:34:00-07:00",
+   "text": "checks.........................: 100.00% 4821 out of 4821 http_req_duration..............: avg=64.2ms p(95)=141ms p(99)=183ms http_req_failed................: 0.02% scenarios: search_burst ramping-vus target: https://atlas-api.internal/v2/search",
+   "source": "screen",
+   "context": {
+    "app": "iTerm2",
+    "title": "~/dev \u2014 zsh",
+    "method": "region"
+   }
+  },
+  "expect": {
+   "targets": [
+    "projects/atlas"
+   ],
+   "loop": false,
+   "class": "screen-terminal-signal"
+  }
+ },
+ {
+  "record": {
+   "id": "cap-20260707-093500-00000023",
+   "ts": "2026-07-07T09:35:00-07:00",
+   "text": "Helios admin console \u2014 staging Username hetansh Password \u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022 Remember this device Sign in Rollout note: dark mode flag stays off for the beta cohort until the export bug is fixed",
+   "source": "screen",
+   "context": {
+    "app": "Google Chrome",
+    "title": "Helios Admin \u2014 Sign in",
+    "method": "region"
+   }
+  },
+  "expect": {
+   "targets": [
+    "projects/helios"
+   ],
+   "loop": false,
+   "class": "screen-redaction-leak"
+  }
+ },
+ {
+  "record": {
+   "id": "cap-20260707-093600-00000024",
+   "ts": "2026-07-07T09:36:00-07:00",
+   "text": "Staff Platform Engineer \u2014 3 candidates awaiting your review Aisha Khan submitted 4d ago SLA breach in 2 days Tom Herrera submitted 2d ago Priya N. referred internal Review now",
+   "source": "screen",
+   "context": {
+    "app": "Google Chrome",
+    "title": "Review queue \u2014 Greenhouse",
+    "method": "window"
+   }
+  },
+  "expect": {
+   "targets": [
+    "topics/hiring"
+   ],
+   "loop": true,
+   "owner": "me",
+   "class": "screen-hiring-loop"
+  }
  }
 ]

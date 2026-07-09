@@ -83,3 +83,18 @@ brief written, notification delivered — with zero extra configuration. The
 headless claude ignores workspace `permissions.allow` in untrusted dirs (denies still
 apply), so the eval harness grants the vault CLI via `--allowedTools` flags and real users
 accept the trust dialog once (docs/headless-notes.md).
+
+## D8 — Screen-capture metadata entered the eval before the client existed (2026-07-08)
+
+Fixtures may now carry `source` and `context` ({app, title, method}); the harness passes
+both through `append_capture` verbatim and the golden generator mirrors them in
+`new_capture` key order (golden inbox integrity is a byte comparison). The grader never
+reads `context` — metadata rides only the integrity check; routing is graded on where
+text landed. **Tripwire: at most 2 loop-true fixtures may be added per extension** —
+golden loop recall must stay under the 0.90 gate for the grader-honesty test to keep
+biting (8/9 = 0.889 fails ✓; a 9/10 extension flips CI). The librarian prompt was NOT
+changed: on the first 37-fixture run both probes passed — the hint-follow fixture routed
+a generic capacity plan to atlas via its title, and the title-mislead fixture followed
+the text to atlas over a #helios-launch window title. 36/37 routing, 9/9 loop recall.
+Fixture texts are synthetic but noise-modeled (UI chrome, OCR hyphenation, dot-leaders);
+capture-quality ground truth belongs to evals/capture/, not this set.

@@ -88,12 +88,16 @@ def main() -> None:
     manifest, inbox_lines, processed_lines = [], [], []
     for i, fx in enumerate(fixtures):
         ts = f"{DAY}T09:{i:02d}:00-07:00"
+        # key order must match formats.new_capture (id, ts, text, source, context):
+        # golden inbox integrity is a byte comparison of dump_capture_line output
         record = {
             "id": f"cap-20260707-09{i:02d}00-{i:08x}",
             "ts": ts,
             "text": fx["text"],
-            "source": "cli",
+            "source": fx.get("source", "cli"),
         }
+        if fx.get("context"):
+            record["context"] = fx["context"]
         manifest.append({"record": record, "expect": fx["expect"]})
         inbox_lines.append(dump_capture_line(record))
 

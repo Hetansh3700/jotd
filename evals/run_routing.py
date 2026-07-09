@@ -61,7 +61,9 @@ def build_eval_vault(tmp: Path) -> list[dict]:
     ]
     manifest = []
     for fx in fixtures:
-        record = inbox.append_capture(tmp, fx["text"], source="eval")
+        record = inbox.append_capture(
+            tmp, fx["text"], source=fx.get("source", "eval"), context=fx.get("context")
+        )
         manifest.append({"record": record, "expect": fx["expect"]})
     (tmp / "manifest.json").write_text(json.dumps(manifest, indent=1), encoding="utf-8")
     return manifest

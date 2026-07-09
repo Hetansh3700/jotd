@@ -1,17 +1,17 @@
 {
  "n": 37,
- "routing_hits": 35,
- "routing_accuracy": 0.9459,
+ "routing_hits": 36,
+ "routing_accuracy": 0.973,
  "loops_expected": 9,
- "loops_found": 8,
- "loop_recall": 0.8889,
- "loops_stamped": 8,
- "loop_precision": 1.0,
+ "loops_found": 9,
+ "loop_recall": 1.0,
+ "loops_stamped": 10,
+ "loop_precision": 0.9,
  "inbox_intact": true,
  "processed_complete": true,
  "per_capture": [
   {
-   "id": "cap-20260707-090000-00000000",
+   "id": "cap-20260708-194959-a78deba4",
    "class": "person",
    "text": "sarah is out thursday and friday, her mom's visiting",
    "ok": true,
@@ -22,7 +22,7 @@
    "loop_ok": null
   },
   {
-   "id": "cap-20260707-090100-00000001",
+   "id": "cap-20260708-194959-c93bc21f",
    "class": "person",
    "text": "marcus got promoted to staff, announcement goes out friday",
    "ok": true,
@@ -33,7 +33,7 @@
    "loop_ok": null
   },
   {
-   "id": "cap-20260707-090200-00000002",
+   "id": "cap-20260708-194959-657df367",
    "class": "person",
    "text": "priya mentioned she's thinking about moving to the platform ",
    "ok": true,
@@ -44,20 +44,18 @@
    "loop_ok": null
   },
   {
-   "id": "cap-20260707-090300-00000003",
+   "id": "cap-20260708-194959-acf1bf12",
    "class": "person-alias",
    "text": "schen prefers async updates over meetings, she's told me twi",
-   "ok": false,
+   "ok": true,
    "routed": [
-    "notes/topics/unsorted.md"
+    "notes/people/sarah-chen.md"
    ],
-   "missing": [
-    "people/sarah-chen"
-   ],
+   "missing": [],
    "loop_ok": null
   },
   {
-   "id": "cap-20260707-090400-00000004",
+   "id": "cap-20260708-194959-e5a0379e",
    "class": "person-new",
    "text": "met dana ross from the data team today, she owns the warehou",
    "ok": true,
@@ -68,7 +66,7 @@
    "loop_ok": null
   },
   {
-   "id": "cap-20260707-090500-00000005",
+   "id": "cap-20260708-194959-3b306fa6",
    "class": "project",
    "text": "atlas p99 latency dropped to 180ms after the connection pool",
    "ok": true,
@@ -79,7 +77,7 @@
    "loop_ok": null
   },
   {
-   "id": "cap-20260707-090600-00000006",
+   "id": "cap-20260708-194959-a4f4a62e",
    "class": "project",
    "text": "helios dark mode shipped behind a flag, rollout starts next ",
    "ok": true,
@@ -90,7 +88,7 @@
    "loop_ok": null
   },
   {
-   "id": "cap-20260707-090700-00000007",
+   "id": "cap-20260708-194959-9cfe5dd3",
    "class": "project",
    "text": "the atlas rate limiter is moving to the gateway, backend tea",
    "ok": true,
@@ -101,7 +99,7 @@
    "loop_ok": null
   },
   {
-   "id": "cap-20260707-090800-00000008",
+   "id": "cap-20260708-194959-6c004760",
    "class": "project",
    "text": "helios usability test: 4 of 5 users couldn't find the export",
    "ok": true,
@@ -112,7 +110,7 @@
    "loop_ok": null
   },
   {
-   "id": "cap-20260707-090900-00000009",
+   "id": "cap-20260708-194959-5f4ea312",
    "class": "project",
    "text": "we're killing the atlas graphql experiment, rest only from h",
    "ok": true,
@@ -123,7 +121,7 @@
    "loop_ok": null
   },
   {
-   "id": "cap-20260707-091000-0000000a",
+   "id": "cap-20260708-194959-f9eb8c91",
    "class": "topic",
    "text": "idea: the embeddings dedupe pass could also power a related-",
    "ok": true,
@@ -134,7 +132,7 @@
    "loop_ok": null
   },
   {
-   "id": "cap-20260707-091100-0000000b",
+   "id": "cap-20260708-194959-20d6b2ed",
    "class": "topic",
    "text": "the staff-plus book everyone keeps recommending: the staff e",
    "ok": true,
@@ -145,7 +143,7 @@
    "loop_ok": null
   },
   {
-   "id": "cap-20260707-091200-0000000c",
+   "id": "cap-20260708-194959-5ad8d85a",
    "class": "topic",
    "text": "hiring thought: ask candidates to review a real PR instead o",
    "ok": true,
@@ -156,29 +154,32 @@
    "loop_ok": null
   },
   {
-   "id": "cap-20260707-091300-0000000d",
+   "id": "cap-20260708-194959-fd6db84b",
    "class": "topic-new",
    "text": "shower thought: agent UIs need an interruption budget the wa",
-   "ok": true,
+   "ok": false,
    "routed": [
-    "notes/topics/agent-interruption-budget.md"
+    "notes/topics/unsorted.md"
    ],
-   "missing": [],
+   "missing": [
+    "topics/*"
+   ],
    "loop_ok": null
   },
   {
-   "id": "cap-20260707-091400-0000000e",
+   "id": "cap-20260708-194959-370efb1f",
    "class": "action-own",
    "text": "todo: send sarah the q3 atlas numbers before thursday",
    "ok": true,
    "routed": [
-    "notes/people/sarah-chen.md"
+    "notes/people/sarah-chen.md",
+    "notes/projects/atlas.md"
    ],
    "missing": [],
    "loop_ok": true
   },
   {
-   "id": "cap-20260707-091500-0000000f",
+   "id": "cap-20260708-194959-c5f59a31",
    "class": "action-own",
    "text": "need to renew the atlas pagerduty rotation before end of mon",
    "ok": true,
@@ -189,18 +190,19 @@
    "loop_ok": true
   },
   {
-   "id": "cap-20260707-091600-00000010",
+   "id": "cap-20260708-194959-0f3db8dc",
    "class": "action-own",
    "text": "todo: review priya's figma file for the helios empty states",
    "ok": true,
    "routed": [
+    "notes/people/priya-nair.md",
     "notes/projects/helios.md"
    ],
    "missing": [],
    "loop_ok": true
   },
   {
-   "id": "cap-20260707-091700-00000011",
+   "id": "cap-20260708-194959-f46eaf66",
    "class": "action-own",
    "text": "i owe marcus a decision on the terraform module split",
    "ok": true,
@@ -211,7 +213,7 @@
    "loop_ok": true
   },
   {
-   "id": "cap-20260707-091800-00000012",
+   "id": "cap-20260708-194959-d2c501b1",
    "class": "action-own-nohome",
    "text": "book flights for the november offsite before prices jump",
    "ok": true,
@@ -222,18 +224,19 @@
    "loop_ok": true
   },
   {
-   "id": "cap-20260707-091900-00000013",
+   "id": "cap-20260708-194959-6f3774ad",
    "class": "action-theirs",
    "text": "sarah owes me the atlas security review sign-off by wednesda",
    "ok": true,
    "routed": [
-    "notes/people/sarah-chen.md"
+    "notes/people/sarah-chen.md",
+    "notes/projects/atlas.md"
    ],
    "missing": [],
    "loop_ok": true
   },
   {
-   "id": "cap-20260707-092000-00000014",
+   "id": "cap-20260708-194959-dae0f144",
    "class": "action-theirs",
    "text": "marcus said he'd send the infra cost breakdown this week",
    "ok": true,
@@ -241,10 +244,10 @@
     "notes/people/marcus-webb.md"
    ],
    "missing": [],
-   "loop_ok": false
+   "loop_ok": true
   },
   {
-   "id": "cap-20260707-092100-00000015",
+   "id": "cap-20260708-194959-ead56e4d",
    "class": "fanout",
    "text": "marcus is taking over atlas on-call from me starting next sp",
    "ok": true,
@@ -256,20 +259,19 @@
    "loop_ok": null
   },
   {
-   "id": "cap-20260707-092200-00000016",
+   "id": "cap-20260708-194959-9341a38c",
    "class": "fanout",
    "text": "sarah wants the helios beta list trimmed to 20 customers",
-   "ok": false,
+   "ok": true,
    "routed": [
+    "notes/people/sarah-chen.md",
     "notes/projects/helios.md"
    ],
-   "missing": [
-    "people/sarah-chen"
-   ],
+   "missing": [],
    "loop_ok": null
   },
   {
-   "id": "cap-20260707-092300-00000017",
+   "id": "cap-20260708-194959-75d27846",
    "class": "fanout",
    "text": "priya's design system audit is blocking the atlas admin ui r",
    "ok": true,
@@ -281,7 +283,7 @@
    "loop_ok": null
   },
   {
-   "id": "cap-20260707-092400-00000018",
+   "id": "cap-20260708-194959-ea23d3f1",
    "class": "ambiguous",
    "text": "the thing from standup about caching",
    "ok": true,
@@ -292,7 +294,7 @@
    "loop_ok": null
   },
   {
-   "id": "cap-20260707-092500-00000019",
+   "id": "cap-20260708-194959-88f97e95",
    "class": "ambiguous",
    "text": "check the numbers again",
    "ok": true,
@@ -303,7 +305,7 @@
    "loop_ok": null
   },
   {
-   "id": "cap-20260707-092600-0000001a",
+   "id": "cap-20260708-194959-b8e50d41",
    "class": "ambiguous",
    "text": "blue?? maybe green actually",
    "ok": true,
@@ -314,7 +316,7 @@
    "loop_ok": null
   },
   {
-   "id": "cap-20260707-092700-0000001b",
+   "id": "cap-20260708-194959-b546b880",
    "class": "ambiguous",
    "text": "that podcast point about maintenance vs novelty",
    "ok": true,
@@ -325,7 +327,7 @@
    "loop_ok": null
   },
   {
-   "id": "cap-20260707-092800-0000001c",
+   "id": "cap-20260708-194959-212158b4",
    "class": "screen-pdf",
    "text": "Being a staff engineer is not a purely tech- nical role. Muc",
    "ok": true,
@@ -336,7 +338,7 @@
    "loop_ok": null
   },
   {
-   "id": "cap-20260707-092900-0000001d",
+   "id": "cap-20260708-194959-c970bfea",
    "class": "screen-article",
    "text": "As the corpus grows, near-duplicate vectors begin to dominat",
    "ok": true,
@@ -347,7 +349,7 @@
    "loop_ok": null
   },
   {
-   "id": "cap-20260707-093000-0000001e",
+   "id": "cap-20260708-194959-fc48e1ca",
    "class": "screen-slack-fanout-loop",
    "text": "Sarah Chen 2:14 PM can you get me the trimmed helios beta li",
    "ok": true,
@@ -359,7 +361,7 @@
    "loop_ok": true
   },
   {
-   "id": "cap-20260707-093100-0000001f",
+   "id": "cap-20260708-194959-fa7bb729",
    "class": "screen-hint-follow",
    "text": "Scaling the write path remains the biggest capacity risk goi",
    "ok": true,
@@ -370,7 +372,7 @@
    "loop_ok": null
   },
   {
-   "id": "cap-20260707-093200-00000020",
+   "id": "cap-20260708-194959-9a3decb9",
    "class": "screen-title-mislead",
    "text": "devon 11:03 AM the atlas rate limiter cutover finished last ",
    "ok": true,
@@ -381,7 +383,7 @@
    "loop_ok": null
   },
   {
-   "id": "cap-20260707-093300-00000021",
+   "id": "cap-20260708-194959-c3cab445",
    "class": "screen-terminal-noise",
    "text": "npm ERR! code ERESOLVE npm ERR! ERESOLVE unable to resolve d",
    "ok": true,
@@ -392,7 +394,7 @@
    "loop_ok": null
   },
   {
-   "id": "cap-20260707-093400-00000022",
+   "id": "cap-20260708-194959-ac751f94",
    "class": "screen-terminal-signal",
    "text": "checks.........................: 100.00% 4821 out of 4821 ht",
    "ok": true,
@@ -403,7 +405,7 @@
    "loop_ok": null
   },
   {
-   "id": "cap-20260707-093500-00000023",
+   "id": "cap-20260708-194959-d6b72159",
    "class": "screen-redaction-leak",
    "text": "Helios admin console \u2014 staging Username hetansh Password \u2022\u2022\u2022",
    "ok": true,
@@ -414,12 +416,13 @@
    "loop_ok": null
   },
   {
-   "id": "cap-20260707-093600-00000024",
+   "id": "cap-20260708-194959-b094a41f",
    "class": "screen-hiring-loop",
    "text": "Staff Platform Engineer \u2014 3 candidates awaiting your review ",
    "ok": true,
    "routed": [
-    "notes/topics/hiring.md"
+    "notes/topics/hiring.md",
+    "notes/people/priya-nair.md"
    ],
    "missing": [],
    "loop_ok": true
