@@ -3,7 +3,7 @@ requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "vault-brain"
+name = "jotd-by-claude"
 version = "0.2.0"
 description = "A proactive notes brain for Claude Code: capture instantly, let an agent organize, and get nudged about what matters — under a strict interruption budget with logged suppressions."
 readme = "README.md"
@@ -26,17 +26,17 @@ dependencies = [
 dev = ["pytest>=8", "ruff>=0.5", "mypy>=1.10", "build", "twine"]
 
 [project.scripts]
-vault = "vault.cli:main"
+jotd = "jotd.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/hetanshpatel/vault"
-Issues = "https://github.com/hetanshpatel/vault/issues"
+Homepage = "https://github.com/hetanshpatel/jotd-by-claude"
+Issues = "https://github.com/hetanshpatel/jotd-by-claude/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-vault = ["py.typed", "templates/**/*"]
+jotd = ["py.typed", "templates/**/*"]
 
 [tool.ruff]
 line-length = 100

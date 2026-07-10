@@ -1,4 +1,4 @@
-"""Data-dir resolution and vault.toml config."""
+"""Data-dir resolution and jotd.toml config."""
 
 from __future__ import annotations
 
@@ -7,24 +7,24 @@ import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
 
-POINTER_FILE = Path.home() / ".config" / "vault" / "dir"
-DEFAULT_DATA_DIR = Path.home() / "vault"
+POINTER_FILE = Path.home() / ".config" / "jotd" / "dir"
+DEFAULT_DATA_DIR = Path.home() / "jotd"
 
 
 def resolve_data_dir(explicit: str | Path | None = None) -> Path:
-    """Precedence: --dir flag > $VAULT_DIR > cwd-that-is-a-vault > pointer file > ~/vault.
+    """Precedence: --dir flag > $JOTD_DIR > cwd-that-is-a-jotd-dir > pointer file > ~/jotd.
 
     The cwd rule is what makes agent subprocesses Just Work: /organize and the
-    pulse run with cwd = the data dir, so `vault unprocessed` inside them needs
+    pulse run with cwd = the data dir, so `jotd unprocessed` inside them needs
     no configuration.
     """
     if explicit:
         return Path(explicit).expanduser().resolve()
-    env = os.environ.get("VAULT_DIR")
+    env = os.environ.get("JOTD_DIR")
     if env:
         return Path(env).expanduser().resolve()
     cwd = Path.cwd()
-    if (cwd / "vault.toml").is_file():
+    if (cwd / "jotd.toml").is_file():
         return cwd
     if POINTER_FILE.is_file():
         pointed = Path(POINTER_FILE.read_text(encoding="utf-8").strip()).expanduser()
@@ -48,7 +48,7 @@ class PulseConfig:
 
 def load_config(data_dir: Path) -> PulseConfig:
     cfg = PulseConfig()
-    toml_path = data_dir / "vault.toml"
+    toml_path = data_dir / "jotd.toml"
     if not toml_path.is_file():
         return cfg
     data = tomllib.loads(toml_path.read_text(encoding="utf-8")).get("pulse", {})

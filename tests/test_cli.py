@@ -2,13 +2,13 @@ import json
 
 from typer.testing import CliRunner
 
-from vault import init as vinit
-from vault.cli import app
+from jotd import init as vinit
+from jotd.cli import app
 
 runner = CliRunner()
 
 
-def make_vault(tmp_path, monkeypatch):
+def make_jotd_dir(tmp_path, monkeypatch):
     monkeypatch.setattr(vinit, "POINTER_FILE", tmp_path / "pointer")
     target = tmp_path / "v"
     result = runner.invoke(app, ["init", str(target), "--no-git"])
@@ -17,7 +17,7 @@ def make_vault(tmp_path, monkeypatch):
 
 
 def test_init_add_unprocessed_mark_roundtrip(tmp_path, monkeypatch):
-    target = make_vault(tmp_path, monkeypatch)
+    target = make_jotd_dir(tmp_path, monkeypatch)
 
     result = runner.invoke(app, ["add", "call sarah about atlas", "--dir", str(target)])
     assert result.exit_code == 0, result.output
@@ -38,7 +38,7 @@ def test_init_add_unprocessed_mark_roundtrip(tmp_path, monkeypatch):
 
 
 def test_capture_context_roundtrip(tmp_path, monkeypatch):
-    target = make_vault(tmp_path, monkeypatch)
+    target = make_jotd_dir(tmp_path, monkeypatch)
     result = runner.invoke(
         app,
         [
@@ -68,7 +68,7 @@ def test_capture_context_roundtrip(tmp_path, monkeypatch):
 
 
 def test_capture_without_flags_has_no_context(tmp_path, monkeypatch):
-    target = make_vault(tmp_path, monkeypatch)
+    target = make_jotd_dir(tmp_path, monkeypatch)
     result = runner.invoke(app, ["capture", "hello", "--dir", str(target)])
     assert result.exit_code == 0, result.output
     (record,) = json.loads(
@@ -78,14 +78,14 @@ def test_capture_without_flags_has_no_context(tmp_path, monkeypatch):
     assert "context" not in record
 
 
-def test_add_refuses_outside_a_vault(tmp_path):
+def test_add_refuses_outside_a_jotd_dir(tmp_path):
     result = runner.invoke(app, ["add", "hello", "--dir", str(tmp_path / "nowhere")])
     assert result.exit_code == 2
-    assert "not a vault" in result.output
+    assert "not a jotd directory" in result.output
 
 
 def test_mark_processed_errors_are_friendly(tmp_path, monkeypatch):
-    target = make_vault(tmp_path, monkeypatch)
+    target = make_jotd_dir(tmp_path, monkeypatch)
     result = runner.invoke(
         app, ["mark-processed", "cap-20990101-000000-dead", "notes/x.md", "--dir", str(target)]
     )

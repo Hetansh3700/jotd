@@ -1,6 +1,6 @@
 """launchd scheduling for the pulse (macOS).
 
-`vault schedule install` writes one plist per slot into ~/Library/LaunchAgents
+`jotd schedule install` writes one plist per slot into ~/Library/LaunchAgents
 and bootstraps them into the user's gui domain — the same domain that owns the
 login keychain, which the claude CLI needs for headless auth.
 """
@@ -14,9 +14,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-from vault.config import load_config
+from jotd.config import load_config
 
-LABEL_PREFIX = "com.vault.pulse"
+LABEL_PREFIX = "com.jotd.pulse"
 
 
 def launch_agents_dir() -> Path:
@@ -27,18 +27,18 @@ def plist_path(slot: str) -> Path:
     return launch_agents_dir() / f"{LABEL_PREFIX}.{slot}.plist"
 
 
-def _vault_bin() -> str:
-    sibling = Path(sys.executable).parent / "vault"
+def _jotd_bin() -> str:
+    sibling = Path(sys.executable).parent / "jotd"
     if sibling.is_file():
         return str(sibling)
-    found = shutil.which("vault")
+    found = shutil.which("jotd")
     if not found:
-        raise RuntimeError("cannot resolve the vault binary for the plist")
+        raise RuntimeError("cannot resolve the jotd binary for the plist")
     return found
 
 
-def _env_path(vault_bin: str) -> str:
-    dirs = [str(Path(vault_bin).parent)]
+def _env_path(jotd_bin: str) -> str:
+    dirs = [str(Path(jotd_bin).parent)]
     claude = shutil.which("claude")
     if claude:
         dirs.append(str(Path(claude).parent))
@@ -50,16 +50,16 @@ def _env_path(vault_bin: str) -> str:
     return os.pathsep.join(seen)
 
 
-def render_plist(slot: str, hhmm: str, vault_bin: str, data_dir: Path) -> bytes:
+def render_plist(slot: str, hhmm: str, jotd_bin: str, data_dir: Path) -> bytes:
     hour, minute = (int(x) for x in hhmm.split(":"))
     payload = {
         "Label": f"{LABEL_PREFIX}.{slot}",
-        "ProgramArguments": [vault_bin, "pulse", "--slot", slot],
+        "ProgramArguments": [jotd_bin, "pulse", "--slot", slot],
         "StartCalendarInterval": {"Hour": hour, "Minute": minute},
         "WorkingDirectory": str(data_dir),
         "StandardOutPath": str(data_dir / "state" / "logs" / f"pulse-{slot}.log"),
         "StandardErrorPath": str(data_dir / "state" / "logs" / f"pulse-{slot}.log"),
-        "EnvironmentVariables": {"PATH": _env_path(vault_bin), "VAULT_DIR": str(data_dir)},
+        "EnvironmentVariables": {"PATH": _env_path(jotd_bin), "JOTD_DIR": str(data_dir)},
     }
     return plistlib.dumps(payload)
 
@@ -70,13 +70,13 @@ def _launchctl(*args: str) -> subprocess.CompletedProcess:
 
 def install(data_dir: Path) -> list[str]:
     cfg = load_config(data_dir)
-    vault_bin = _vault_bin()
+    jotd_bin = _jotd_bin()
     uid = os.getuid()
     launch_agents_dir().mkdir(parents=True, exist_ok=True)
     actions = []
     for slot, hhmm in cfg.slots.items():
         path = plist_path(slot)
-        path.write_bytes(render_plist(slot, hhmm, vault_bin, data_dir))
+        path.write_bytes(render_plist(slot, hhmm, jotd_bin, data_dir))
         lint = subprocess.run(
             ["plutil", "-lint", str(path)], capture_output=True, text=True, check=False
         )

@@ -3,8 +3,8 @@
 This module is the ONLY writer for inbox/*.jsonl and state/processed.log.
 Both writes are single O_APPEND syscalls of one newline-terminated line, so
 concurrent captures interleave at line granularity and nothing ever rewrites
-history. Agents reach these files exclusively through `vault add`,
-`vault unprocessed`, and `vault mark-processed`.
+history. Agents reach these files exclusively through `jotd add`,
+`jotd unprocessed`, and `jotd mark-processed`.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from vault.formats import (
+from jotd.formats import (
     dump_capture_line,
     format_processed_line,
     new_capture,
@@ -24,7 +24,7 @@ from vault.formats import (
 )
 
 
-class VaultError(Exception):
+class JotdError(Exception):
     pass
 
 
@@ -47,7 +47,7 @@ def append_capture(
 ) -> dict[str, Any]:
     text = text.strip()
     if not text:
-        raise VaultError("empty capture")
+        raise JotdError("empty capture")
     now = now or datetime.now().astimezone()
     record = new_capture(text, now=now, rand_hex=uuid.uuid4().hex, source=source, context=context)
     line = dump_capture_line(record)  # raises on oversize BEFORE anything is written
@@ -84,13 +84,13 @@ def unprocessed(data_dir: Path) -> list[dict[str, Any]]:
 def mark_processed(data_dir: Path, capture_id: str, paths: list[str]) -> None:
     known = {r["id"] for r in iter_captures(data_dir)}
     if capture_id not in known:
-        raise VaultError(f"unknown capture id: {capture_id}")
+        raise JotdError(f"unknown capture id: {capture_id}")
     if capture_id in processed_entries(data_dir):
-        raise VaultError(f"already processed: {capture_id}")
+        raise JotdError(f"already processed: {capture_id}")
     for p in paths:
         if not p.startswith("notes/"):
-            raise VaultError(f"routed path must live under notes/: {p}")
+            raise JotdError(f"routed path must live under notes/: {p}")
         if not (data_dir / p).is_file():
-            raise VaultError(f"routed path does not exist (write the note first): {p}")
+            raise JotdError(f"routed path does not exist (write the note first): {p}")
     ts = datetime.now().astimezone().isoformat(timespec="seconds")
     _append_line(data_dir / "state" / "processed.log", format_processed_line(capture_id, paths, ts))

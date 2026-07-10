@@ -1,4 +1,4 @@
-"""`vault derive` — rebuild everything in state/ that is derivable, idempotently.
+"""`jotd derive` — rebuild everything in state/ that is derivable, idempotently.
 
 The load-bearing split of the whole product: the librarian (LLM) decides what a
 capture means and where it goes; THIS module (pure code) owns every aggregate —
@@ -20,15 +20,15 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
-from vault import pulselog
-from vault.config import load_config
-from vault.formats import UNSTAMPED_LOOP_RE, parse_loop_line, parse_processed_line
+from jotd import pulselog
+from jotd.config import load_config
+from jotd.formats import UNSTAMPED_LOOP_RE, parse_loop_line, parse_processed_line
 
 OWNER_RE = re.compile(r"\bowner:\s*(?P<owner>[\w-]+)\s*$")
 
 MD_HEADER = (
-    "# Open loops — derived by `vault derive`; do not hand-edit.\n"
-    "# Respond with `vault done|snooze|drop <id>` (any unique id fragment works).\n"
+    "# Open loops — derived by `jotd derive`; do not hand-edit.\n"
+    "# Respond with `jotd done|snooze|drop <id>` (any unique id fragment works).\n"
 )
 
 

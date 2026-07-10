@@ -10,8 +10,8 @@ from __future__ import annotations
 from datetime import date
 from typing import Any
 
-from vault import pulselog
-from vault.config import PulseConfig
+from jotd import pulselog
+from jotd.config import PulseConfig
 
 
 def remaining_budget(cfg: PulseConfig, events: list[dict[str, Any]], today: date) -> int:

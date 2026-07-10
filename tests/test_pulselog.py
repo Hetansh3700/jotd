@@ -2,7 +2,7 @@ from datetime import date
 
 import pytest
 
-from vault import pulselog
+from jotd import pulselog
 
 TS = "2026-07-08T09:00:00-07:00"
 

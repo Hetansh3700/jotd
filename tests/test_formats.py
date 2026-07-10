@@ -2,7 +2,7 @@ from datetime import datetime
 
 import pytest
 
-from vault.formats import (
+from jotd.formats import (
     CAPTURE_ID_RE,
     MAX_CAPTURE_BYTES,
     dump_capture_line,

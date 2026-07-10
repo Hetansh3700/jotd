@@ -12,7 +12,7 @@ scenes grade Tier A ("region") today and Tier B ("ax"|"window"|"fullscreen")
 later, and reports show method drift per scene over time.
 
 Usage:
-  python evals/capture/run_capture.py --cmd 'contrib/screen-capture/vault-screen-capture.sh --json'
+  python evals/capture/run_capture.py --cmd 'contrib/screen-capture/jotd-screen-capture.sh --json'
   ... --only pdf-two-col        # single scene
   ... --no-wait                 # skip the Enter prompts (pre-staged scenes)
 

@@ -1,6 +1,6 @@
 import json
 
-from vault import init as vinit
+from jotd import init as vinit
 
 
 def _isolate_pointer(monkeypatch, tmp_path):
@@ -14,7 +14,7 @@ def test_scaffold_creates_full_tree(tmp_path, monkeypatch):
     target = tmp_path / "v"
     actions = vinit.scaffold(target, git=False)
     for expected in [
-        "vault.toml",
+        "jotd.toml",
         "CLAUDE.md",
         ".gitignore",
         ".claude/settings.json",
@@ -27,7 +27,7 @@ def test_scaffold_creates_full_tree(tmp_path, monkeypatch):
         assert (target / expected).exists(), expected
     assert not (target / ".git").exists()
     manifest = json.loads((target / vinit.MANIFEST).read_text())
-    assert "vault.toml" in manifest and "CLAUDE.md" in manifest
+    assert "jotd.toml" in manifest and "CLAUDE.md" in manifest
     assert any(a.startswith("installed") for a in actions)
 
 

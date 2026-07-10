@@ -1,5 +1,5 @@
-"""The `vault` CLI. Deterministic entry points only — no LLM calls in this file
-except `vault pulse`, which shells out to a headless claude run (M4)."""
+"""The `jotd` CLI. Deterministic entry points only — no LLM calls in this file
+except `jotd pulse`, which shells out to a headless claude run (M4)."""
 
 from __future__ import annotations
 
@@ -10,36 +10,36 @@ from typing import Annotated
 
 import typer
 
-from vault import inbox
-from vault.config import resolve_data_dir
-from vault.init import scaffold
+from jotd import inbox
+from jotd.config import resolve_data_dir
+from jotd.init import scaffold
 
 app = typer.Typer(no_args_is_help=True, add_completion=False, rich_markup_mode=None)
 
-DirOpt = Annotated[Path | None, typer.Option("--dir", help="vault data dir override")]
+DirOpt = Annotated[Path | None, typer.Option("--dir", help="jotd data dir override")]
 
 
 def _dir(explicit: Path | None) -> Path:
     d = resolve_data_dir(explicit)
-    if not (d / "vault.toml").is_file():
-        typer.echo(f"error: {d} is not a vault (run `vault init {d}` first)", err=True)
+    if not (d / "jotd.toml").is_file():
+        typer.echo(f"error: {d} is not a jotd directory (run `jotd init {d}` first)", err=True)
         raise typer.Exit(2)
     return d
 
 
 @app.command()
 def init(
-    directory: Annotated[Path | None, typer.Argument(help="target dir (default ~/vault)")] = None,
+    directory: Annotated[Path | None, typer.Argument(help="target dir (default ~/jotd)")] = None,
     upgrade: Annotated[bool, typer.Option(help="re-sync unmodified managed files")] = False,
     git: Annotated[bool, typer.Option(help="git-init the data dir")] = True,
-    set_default: Annotated[bool, typer.Option(help="point the default vault here")] = False,
+    set_default: Annotated[bool, typer.Option(help="point the default jotd dir here")] = False,
 ) -> None:
-    """Scaffold (or upgrade) a vault data dir with agents, commands, and conventions."""
-    target = (directory or Path.home() / "vault").expanduser()
+    """Scaffold (or upgrade) a jotd data dir with agents, commands, and conventions."""
+    target = (directory or Path.home() / "jotd").expanduser()
     actions = scaffold(target, git=git, upgrade=upgrade, set_default=set_default)
     for a in actions:
         typer.echo(a)
-    typer.echo(f"vault ready: {target}")
+    typer.echo(f"jotd ready: {target}")
 
 
 def _append(
@@ -53,7 +53,7 @@ def _append(
         joined = sys.stdin.read()
     try:
         record = inbox.append_capture(_dir(directory), joined, source=source, context=context)
-    except (inbox.VaultError, ValueError) as e:
+    except (inbox.JotdError, ValueError) as e:
         typer.echo(f"error: {e}", err=True)
         raise typer.Exit(1) from None
     typer.echo(record["id"])
@@ -81,7 +81,7 @@ def capture(
     """Append a capture with source metadata (for capture clients like screen OCR).
 
     Same append path as `add` — metadata lands in the record's `context` and reaches
-    the librarian as a routing HINT via `vault unprocessed --json`. Clients should
+    the librarian as a routing HINT via `jotd unprocessed --json`. Clients should
     pipe text via stdin (TEXT of '-') to avoid argv quoting hazards.
     """
     context = {k: v for k, v in (("app", app_name), ("title", title), ("method", method)) if v}
@@ -107,13 +107,13 @@ def unprocessed(
 @app.command("mark-processed")
 def mark_processed(
     capture_id: str,
-    paths: Annotated[str, typer.Argument(help="comma-separated vault-relative note paths")],
+    paths: Annotated[str, typer.Argument(help="comma-separated data-dir-relative note paths")],
     directory: DirOpt = None,
 ) -> None:
     """Record where a capture was routed (the ONLY way state/processed.log is written)."""
     try:
         inbox.mark_processed(_dir(directory), capture_id, paths.split(","))
-    except inbox.VaultError as e:
+    except inbox.JotdError as e:
         typer.echo(f"error: {e}", err=True)
         raise typer.Exit(1) from None
     typer.echo(f"processed {capture_id}")
@@ -122,7 +122,7 @@ def mark_processed(
 @app.command()
 def derive(directory: DirOpt = None) -> None:
     """Rebuild derived state: open-loops.md/.json and entities.json (idempotent)."""
-    from vault.derive import derive as run_derive
+    from jotd.derive import derive as run_derive
 
     summary = run_derive(_dir(directory))
     typer.echo(
@@ -142,7 +142,7 @@ def pulse(
     directory: DirOpt = None,
 ) -> None:
     """Run the pulse: derive state, let the model judge, deliver within the budget."""
-    from vault.pulse import run_pulse
+    from jotd.pulse import run_pulse
 
     result = run_pulse(_dir(directory), "manual" if now else slot, dry_run=dry_run)
     if result["status"] == "error":
@@ -161,11 +161,11 @@ def pulse(
 
 
 def _respond(action: str, fragment: str, days: int | None, directory: Path | None) -> None:
-    from vault.feedback import respond
+    from jotd.feedback import respond
 
     try:
         typer.echo(respond(_dir(directory), fragment, action, days=days))
-    except inbox.VaultError as e:
+    except inbox.JotdError as e:
         typer.echo(f"error: {e}", err=True)
         raise typer.Exit(1) from None
 
@@ -182,7 +182,7 @@ def snooze(
     days: Annotated[int | None, typer.Option()] = None,
     directory: DirOpt = None,
 ) -> None:
-    """Snooze a loop (default vault.toml snooze_days); the pulse stays quiet until then."""
+    """Snooze a loop (default jotd.toml snooze_days); the pulse stays quiet until then."""
     _respond("snooze", loop, days, directory)
 
 
@@ -199,7 +199,7 @@ app.add_typer(schedule_app, name="schedule", help="launchd scheduling for the pu
 @schedule_app.command("install")
 def schedule_install(directory: DirOpt = None) -> None:
     """Write per-slot launchd plists and bootstrap them into the gui domain."""
-    from vault import sched
+    from jotd import sched
 
     for line in sched.install(_dir(directory)):
         typer.echo(line)
@@ -207,8 +207,8 @@ def schedule_install(directory: DirOpt = None) -> None:
 
 @schedule_app.command("uninstall")
 def schedule_uninstall() -> None:
-    """Boot out and remove all vault pulse plists."""
-    from vault import sched
+    """Boot out and remove all jotd pulse plists."""
+    from jotd import sched
 
     for line in sched.uninstall():
         typer.echo(line)
@@ -216,7 +216,7 @@ def schedule_uninstall() -> None:
 
 @schedule_app.command("status")
 def schedule_status() -> None:
-    from vault import sched
+    from jotd import sched
 
     for line in sched.status():
         typer.echo(line)
@@ -224,16 +224,16 @@ def schedule_status() -> None:
 
 @app.command()
 def status(directory: DirOpt = None) -> None:
-    """Vault health: inbox backlog, open loops, last pulse heartbeat, schedule."""
+    """Health check: inbox backlog, open loops, last pulse heartbeat, schedule."""
     from datetime import datetime, timedelta
 
-    from vault import pulselog, sched
+    from jotd import pulselog, sched
 
     d = _dir(directory)
     backlog = len(inbox.unprocessed(d))
     events = pulselog.read_events(d)
     beats = [e for e in events if e["kind"] == "heartbeat"]
-    typer.echo(f"vault: {d}")
+    typer.echo(f"jotd directory: {d}")
     typer.echo(f"inbox backlog: {backlog} unprocessed")
     loops_md = d / "state" / "open-loops.md"
     if loops_md.is_file():
@@ -245,7 +245,7 @@ def status(directory: DirOpt = None) -> None:
         stale_after = datetime.now().astimezone() - timedelta(hours=36)
         if not last_ok or datetime.fromisoformat(last_ok["ts"]) < stale_after:
             typer.echo(
-                "WARNING: no successful pulse heartbeat in 36h — check vault schedule status"
+                "WARNING: no successful pulse heartbeat in 36h — check jotd schedule status"
             )
     else:
         typer.echo("last pulse: never")
@@ -270,7 +270,7 @@ def log(
         else:
             typer.echo(f"no brief for {date.today().isoformat()} yet")
         return
-    from vault.pulselog import log_path
+    from jotd.pulselog import log_path
 
     path = log_path(d)
     if not path.is_file():

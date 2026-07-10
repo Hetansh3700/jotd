@@ -1,8 +1,8 @@
 from datetime import date
 
-from vault import pulselog
-from vault.budget import eligible_loops, enforce, remaining_budget
-from vault.config import PulseConfig
+from jotd import pulselog
+from jotd.budget import eligible_loops, enforce, remaining_budget
+from jotd.config import PulseConfig
 
 TODAY = date(2026, 7, 8)
 CFG = PulseConfig()

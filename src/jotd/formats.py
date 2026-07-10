@@ -23,14 +23,14 @@ CAPTURE_ID_RE = re.compile(r"^cap-\d{8}-\d{6}-[0-9a-f]{8}$")
 
 # Loop lines inside notes:  - [ ] text <!-- loop:ID -->   (or "- [x]" once done).
 # ID is either the capture id that spawned the loop (stamped by the librarian) or
-# an l-<6hex> id stamped by `vault derive` for hand-written loops.
+# an l-<6hex> id stamped by `jotd derive` for hand-written loops.
 LOOP_LINE_RE = re.compile(
     r"^(?P<indent>\s*)- \[(?P<state>[ x])\] (?P<text>.*?)\s*<!-- loop:(?P<id>[\w-]+) -->\s*$"
 )
 UNSTAMPED_LOOP_RE = re.compile(r"^(?P<indent>\s*)- \[(?P<state>[ x])\] (?P<text>.*?)\s*$")
 
 # processed.log lines:  <capture-id> <path[,path...]> <iso-ts>
-# Paths are vault-relative (notes/...), comma-separated, no spaces inside the field.
+# Paths are data-dir-relative (notes/...), comma-separated, no spaces inside the field.
 PROCESSED_LINE_RE = re.compile(r"^(?P<id>cap-[\w-]+) (?P<paths>\S+) (?P<ts>\S+)$")
 
 

@@ -19,11 +19,11 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
-from vault.inbox import _append_line
+from jotd.inbox import _append_line
 
 HEADER = (
     "# pulse log — one line per decision, including decisions to stay silent.\n"
-    "# Written by `vault pulse` and `vault done|snooze|drop`. Do not hand-edit.\n"
+    "# Written by `jotd pulse` and `jotd done|snooze|drop`. Do not hand-edit.\n"
 )
 
 _PREFIX = re.compile(r"^- (?P<ts>\S+) (?P<kind>nudge|suppress|response|heartbeat) (?P<rest>.*)$")

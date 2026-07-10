@@ -1,7 +1,7 @@
-"""`vault init` — scaffold or upgrade a personal vault data dir from packaged templates.
+"""`jotd init` — scaffold or upgrade a personal jotd data dir from packaged templates.
 
 Upgrade safety: init records a sha256 manifest of every file it installs
-(.claude/.vault-manifest.json). `--upgrade` overwrites a file only when its
+(.claude/.jotd-manifest.json). `--upgrade` overwrites a file only when its
 current content still matches the recorded hash — i.e. the user never touched
 it. Hand-edited files are skipped with a warning, never clobbered.
 """
@@ -16,10 +16,10 @@ import subprocess
 import sys
 from pathlib import Path
 
-from vault.config import POINTER_FILE
+from jotd.config import POINTER_FILE
 
 TEMPLATES = Path(__file__).parent / "templates"
-MANIFEST = ".claude/.vault-manifest.json"
+MANIFEST = ".claude/.jotd-manifest.json"
 
 NOTE_DIRS = ["people", "projects", "topics", "meetings", "journal"]
 
@@ -117,26 +117,26 @@ def scaffold(
         if set_default or not POINTER_FILE.exists():
             POINTER_FILE.parent.mkdir(parents=True, exist_ok=True)
             POINTER_FILE.write_text(str(data_dir) + "\n", encoding="utf-8")
-            actions.append(f"default vault -> {data_dir}")
+            actions.append(f"default jotd directory -> {data_dir}")
         elif POINTER_FILE.read_text(encoding="utf-8").strip() != str(data_dir):
             actions.append(
-                f"note: default vault is {POINTER_FILE.read_text().strip()} "
+                f"note: default jotd directory is {POINTER_FILE.read_text().strip()} "
                 "(rerun with --set-default to switch)"
             )
 
-    foreign = _foreign_vault_binary()
+    foreign = _foreign_jotd_binary()
     if foreign:
         actions.append(
-            f"warning: another `vault` binary shadows or trails this one on PATH ({foreign}); "
-            "if that is HashiCorp Vault, alias one of them"
+            f"warning: another `jotd` binary shadows or trails this one on PATH ({foreign}); "
+            "likely a stale install — remove or alias one of them"
         )
     return actions
 
 
-def _foreign_vault_binary() -> str | None:
+def _foreign_jotd_binary() -> str | None:
     ours = Path(sys.prefix)
     for d in os.environ.get("PATH", "").split(os.pathsep):
-        candidate = Path(d) / "vault"
+        candidate = Path(d) / "jotd"
         if candidate.is_file() and os.access(candidate, os.X_OK):
             if not candidate.resolve().is_relative_to(ours):
                 return str(candidate)

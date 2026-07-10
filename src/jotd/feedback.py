@@ -1,4 +1,4 @@
-"""`vault done|snooze|drop` — the response half of the nudge feedback loop.
+"""`jotd done|snooze|drop` — the response half of the nudge feedback loop.
 
 Responses are pulse-log events; derive folds them into loop status, and the
 runner pre-filters on that status. Two drops silence a loop permanently.
@@ -12,10 +12,10 @@ from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
-from vault import pulselog
-from vault.config import load_config
-from vault.derive import derive
-from vault.inbox import VaultError
+from jotd import pulselog
+from jotd.config import load_config
+from jotd.derive import derive
+from jotd.inbox import JotdError
 
 
 def resolve_loop(data_dir: Path, fragment: str) -> dict[str, Any]:
@@ -26,10 +26,10 @@ def resolve_loop(data_dir: Path, fragment: str) -> dict[str, Any]:
     live = [lp for lp in loops if lp["status"] in ("open", "snoozed", "silenced")]
     matches = [lp for lp in live if fragment in lp["id"]]
     if not matches:
-        raise VaultError(f"no open loop matches {fragment!r} (see state/open-loops.md)")
+        raise JotdError(f"no open loop matches {fragment!r} (see state/open-loops.md)")
     if len(matches) > 1:
         listing = "\n".join(f"  {lp['id']}  {lp['text'][:50]}" for lp in matches)
-        raise VaultError(f"{fragment!r} is ambiguous:\n{listing}")
+        raise JotdError(f"{fragment!r} is ambiguous:\n{listing}")
     return matches[0]
 
 
@@ -41,7 +41,7 @@ def _flip_checkbox(data_dir: Path, loop: dict[str, Any]) -> None:
             lines[i] = line.replace("- [ ]", "- [x]", 1)
             note.write_text("\n".join(lines) + "\n", encoding="utf-8")
             return
-    raise VaultError(f"could not find the open checkbox for {loop['id']} in {loop['note']}")
+    raise JotdError(f"could not find the open checkbox for {loop['id']} in {loop['note']}")
 
 
 def respond(
@@ -78,7 +78,7 @@ def respond(
         if drops >= pulselog.DROPS_TO_SILENCE:
             message += " — dropped twice, the pulse will never mention it again"
     else:
-        raise VaultError(f"unknown action {action!r}")
+        raise JotdError(f"unknown action {action!r}")
 
     derive(data_dir, today=today)
     return message

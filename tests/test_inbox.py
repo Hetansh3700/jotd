@@ -3,8 +3,8 @@ from datetime import datetime
 
 import pytest
 
-from vault import inbox
-from vault.formats import CAPTURE_ID_RE, MAX_CAPTURE_BYTES, parse_capture_line
+from jotd import inbox
+from jotd.formats import CAPTURE_ID_RE, MAX_CAPTURE_BYTES, parse_capture_line
 
 
 def test_append_creates_monthly_jsonl(tmp_path):
@@ -27,7 +27,7 @@ def test_oversize_rejected_and_nothing_written(tmp_path):
 
 
 def test_empty_capture_rejected(tmp_path):
-    with pytest.raises(inbox.VaultError, match="empty"):
+    with pytest.raises(inbox.JotdError, match="empty"):
         inbox.append_capture(tmp_path, "   ")
 
 
@@ -50,18 +50,18 @@ def test_concurrent_appends_interleave_at_line_granularity(tmp_path):
 
 
 def test_concurrent_processes_append(tmp_path):
-    """True cross-process O_APPEND proof: parallel `vault` console-script
+    """True cross-process O_APPEND proof: parallel `jotd` console-script
     subprocesses (the screen client's write path) interleave at line
     granularity with unique ids — the thread test can't prove this."""
     import subprocess
     import sys
     from pathlib import Path
 
-    (tmp_path / "vault.toml").write_text("")
-    vault_bin = Path(sys.executable).parent / "vault"
+    (tmp_path / "jotd.toml").write_text("")
+    jotd_bin = Path(sys.executable).parent / "jotd"
     procs = [
         subprocess.Popen(
-            [str(vault_bin), "capture", f"probe {i}", "--method", "region", "--dir", str(tmp_path)],
+            [str(jotd_bin), "capture", f"probe {i}", "--method", "region", "--dir", str(tmp_path)],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
@@ -88,16 +88,16 @@ def test_unprocessed_is_set_difference(tmp_path):
 
 def test_mark_processed_validations(tmp_path):
     rec = inbox.append_capture(tmp_path, "hello")
-    with pytest.raises(inbox.VaultError, match="unknown capture id"):
+    with pytest.raises(inbox.JotdError, match="unknown capture id"):
         inbox.mark_processed(tmp_path, "cap-20990101-000000-dead", ["notes/x.md"])
-    with pytest.raises(inbox.VaultError, match="does not exist"):
+    with pytest.raises(inbox.JotdError, match="does not exist"):
         inbox.mark_processed(tmp_path, rec["id"], ["notes/people/ghost.md"])
-    with pytest.raises(inbox.VaultError, match="under notes/"):
+    with pytest.raises(inbox.JotdError, match="under notes/"):
         inbox.mark_processed(tmp_path, rec["id"], ["state/processed.log"])
 
     note = tmp_path / "notes" / "people" / "sarah.md"
     note.parent.mkdir(parents=True)
     note.write_text("x")
     inbox.mark_processed(tmp_path, rec["id"], ["notes/people/sarah.md"])
-    with pytest.raises(inbox.VaultError, match="already processed"):
+    with pytest.raises(inbox.JotdError, match="already processed"):
         inbox.mark_processed(tmp_path, rec["id"], ["notes/people/sarah.md"])

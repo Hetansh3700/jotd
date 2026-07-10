@@ -1,6 +1,6 @@
-// vault-screen-ocr — one-shot, on-device OCR for the vault screen-capture client.
+// jotd-screen-ocr — one-shot, on-device OCR for the jotd screen-capture client.
 //
-//   usage: vault-screen-ocr <png-path>
+//   usage: jotd-screen-ocr <png-path>
 //   output: one JSON object on stdout: {"text": str, "app": str|null, "title": str|null}
 //
 // Deliberately different from streaming/ambient OCR settings: .accurate recognition
@@ -21,7 +21,7 @@ import Vision
 // MARK: - image loading
 
 guard CommandLine.arguments.count == 2 else {
-    FileHandle.standardError.write("usage: vault-screen-ocr <png-path>\n".data(using: .utf8)!)
+    FileHandle.standardError.write("usage: jotd-screen-ocr <png-path>\n".data(using: .utf8)!)
     exit(2)
 }
 let path = CommandLine.arguments[1]

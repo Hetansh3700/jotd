@@ -119,3 +119,17 @@ Field findings baked into the code:
 2. **Text on a transparent background OCRs as blank** (composited on black). The helper
    flattens alpha onto white before recognition; the committed two-col.pdf asset draws
    an explicit white page fill for the same reason.
+
+## D10 — Renamed: vault → jotd-by-claude / jotd (2026-07-09)
+
+Full rename, no compatibility shims (pre-release, single dogfooder): dist `vault-brain` →
+**`jotd-by-claude`**, import package and CLI `vault` → **`jotd`**, and every derived
+identifier — `JOTD_DIR`, `jotd.toml`, `~/.config/jotd/dir`, default data dir `~/jotd`,
+launchd labels `com.jotd.pulse.*`, manifest `.claude/.jotd-manifest.json`, notification
+title/group `jotd`, `jotd-screen-capture.sh` / `jotd-screen-ocr`. Prose swept too: the data
+dir is a "jotd directory", not a "vault". Earlier entries in this log keep the old names —
+they are records, not docs. The D0 HashiCorp binary collision is moot with a CLI named
+`jotd`; the init-time PATH shadow check stays, generalized to warn about any foreign `jotd`
+binary (stale installs). two-col.pdf was regenerated (byte-deterministic generator) because
+its sample text named the old product. Verify `jotd-by-claude` is free on PyPI before the
+first publish.

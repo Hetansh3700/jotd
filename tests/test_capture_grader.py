@@ -14,7 +14,7 @@ SCENE = {
 
 GOOD_TEXT = (
     "The pulse enforces a strict interruption\nbudget: at most three nudges per run and\n"
-    "six per day. The vault runs three pulses\nper day by default."
+    "six per day. jotd runs three pulses\nper day by default."
 )
 
 

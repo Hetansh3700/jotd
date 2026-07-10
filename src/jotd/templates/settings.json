@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "deny": [
+      "Edit(./inbox/**)",
+      "Write(./inbox/**)",
+      "Edit(./state/**)",
+      "Write(./state/**)",
+      "Edit(./jotd.toml)",
+      "Write(./jotd.toml)"
+    ],
+    "allow": [
+      "Bash(jotd add:*)",
+      "Bash(jotd unprocessed:*)",
+      "Bash(jotd mark-processed:*)",
+      "Bash(jotd derive:*)",
+      "Bash(jotd status:*)",
+      "Bash(jotd log:*)",
+      "Bash(jotd pulse:*)",
+      "Bash(jotd done:*)",
+      "Bash(jotd snooze:*)",
+      "Bash(jotd drop:*)"
+    ]
+  }
+}

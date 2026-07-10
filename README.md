@@ -1,10 +1,10 @@
-# vault
+# jotd-by-claude
 
 **A proactive notes brain for Claude Code.** Your notes work for you between the times you
 look at them.
 
-Every notes tool stores. A few retrieve well. None act. vault captures fragments instantly,
-has an agent organize them into an entity-linked vault, derives what's actually open — and
+Every notes tool stores. A few retrieve well. None act. jotd captures fragments instantly,
+has an agent organize them into an entity-linked notes directory, derives what's actually open — and
 then **the pulse**, a scheduled headless Claude Code run, reads that state a few times a day
 and decides whether anything deserves your attention. Under a hard interruption budget.
 With every decision logged, **including the decisions to stay silent**.

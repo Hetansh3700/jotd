@@ -1,4 +1,4 @@
-"""`vault pulse` — the scheduled run that decides what deserves attention.
+"""`jotd pulse` — the scheduled run that decides what deserves attention.
 
 Control flow is deterministic code; ONLY the judgment call ("of these eligible
 loops, which would the user act on today, and why / why not?") goes to the
@@ -22,17 +22,17 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from vault import budget as budget_mod
-from vault import notify, pulselog
-from vault.config import PulseConfig, load_config
-from vault.derive import derive
+from jotd import budget as budget_mod
+from jotd import notify, pulselog
+from jotd.config import PulseConfig, load_config
+from jotd.derive import derive
 
 SLOTS = ("morning", "midday", "evening", "manual")
 CLAUDE_TIMEOUT_S = 300
 RECENT_EVENTS_IN_PACKET = 20
 
 PACKET_TASK = (
-    "You are this vault's pulse. Read the packet below; you may Read/Grep notes in the "
+    "You are this jotd directory's pulse. Read the packet below; you may Read/Grep notes in the "
     "current directory for extra context on any candidate loop. Then reply with ONLY a JSON "
     'object, no prose, no code fences: {"nudges": [{"loop_id": str, "text": str, '
     '"reason": str}], "suppressed": [{"loop_id": str, "reason": str}], "brief": str|null}'
@@ -281,18 +281,18 @@ def run_pulse(
             else:
                 path = _write_brief(data_dir, today, brief_md, packet)
                 notify.send(
-                    "vault — daily brief",
-                    f"Brief ready: vault log --brief ({path.name})",
+                    "jotd — daily brief",
+                    f"Brief ready: jotd log --brief ({path.name})",
                     cfg.channel,
                 )
                 actions.append(f"brief -> {path}")
 
         for n in kept:
-            message = f"{n['text']} — vault done|snooze|drop {_short(n['loop_id'])}"
+            message = f"{n['text']} — jotd done|snooze|drop {_short(n['loop_id'])}"
             if dry_run:
                 actions.append(f"would nudge: {message}  [reason: {n['reason']}]")
             else:
-                notify.send("vault", message, cfg.channel)
+                notify.send("jotd", message, cfg.channel)
                 pulselog.append_event(
                     data_dir,
                     "nudge",

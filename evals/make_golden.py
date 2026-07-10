@@ -1,6 +1,6 @@
 """Regenerate evals/golden/ — a synthetic, deterministic /organize run.
 
-The golden vault is what a competent librarian WOULD produce over the fixture
+The golden jotd directory is what a competent librarian WOULD produce over the fixture
 captures, with three planted defects so tests prove the grader catches misses:
 
   D-a  capture idx 3  ("schen prefers async...") misrouted to topics/unsorted
@@ -25,7 +25,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from vault.formats import dump_capture_line, format_loop_line  # noqa: E402
+from jotd.formats import dump_capture_line, format_loop_line  # noqa: E402
 
 EVALS = Path(__file__).resolve().parent
 GOLDEN = EVALS / "golden"
@@ -44,8 +44,8 @@ SKIP_LOOP_STAMP = {20}  # defect D-c
 GLOB_RESOLUTION = {4: ["people/dana-ross"], 13: ["topics/agent-interruption-budget"]}
 
 
-def ensure_note(vault: Path, target: str, kind: str, title: str) -> Path:
-    path = vault / "notes" / (target + ".md")
+def ensure_note(jotd_dir: Path, target: str, kind: str, title: str) -> Path:
+    path = jotd_dir / "notes" / (target + ".md")
     if not path.exists():
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(
@@ -80,10 +80,10 @@ def main() -> None:
 
     if GOLDEN.exists():
         shutil.rmtree(GOLDEN)
-    vault = GOLDEN / "vault"
-    (vault / "inbox").mkdir(parents=True)
-    (vault / "state").mkdir(parents=True)
-    shutil.copytree(EVALS / "fixtures" / "seed-vault" / "notes", vault / "notes")
+    jotd_dir = GOLDEN / "jotd"
+    (jotd_dir / "inbox").mkdir(parents=True)
+    (jotd_dir / "state").mkdir(parents=True)
+    shutil.copytree(EVALS / "fixtures" / "seed-jotd" / "notes", jotd_dir / "notes")
 
     manifest, inbox_lines, processed_lines = [], [], []
     for i, fx in enumerate(fixtures):
@@ -104,21 +104,21 @@ def main() -> None:
         targets = OVERRIDES.get(i) or GLOB_RESOLUTION.get(i) or fx["expect"]["targets"]
         for target in targets:
             kind, title = NEW_NOTES.get(target, (target.split("/")[0].rstrip("s"), target))
-            path = ensure_note(vault, target, kind, title)
+            path = ensure_note(jotd_dir, target, kind, title)
             append_under(path, "## Log", f"- {DAY}: {fx['text']} ({record['id']})")
         if fx["expect"].get("loop") and i not in SKIP_LOOP_STAMP:
-            first = vault / "notes" / (targets[0] + ".md")
+            first = jotd_dir / "notes" / (targets[0] + ".md")
             append_under(first, "## Open loops", format_loop_line(fx["text"], record["id"]))
         routed = ",".join("notes/" + t + ".md" for t in targets)
         processed_lines.append(f"{record['id']} {routed} {ts}\n")
 
-    (vault / "inbox" / "2026-07.jsonl").write_text("".join(inbox_lines), encoding="utf-8")
-    (vault / "state" / "processed.log").write_text("".join(processed_lines), encoding="utf-8")
+    (jotd_dir / "inbox" / "2026-07.jsonl").write_text("".join(inbox_lines), encoding="utf-8")
+    (jotd_dir / "state" / "processed.log").write_text("".join(processed_lines), encoding="utf-8")
     (GOLDEN / "manifest.json").write_text(json.dumps(manifest, indent=1), encoding="utf-8")
 
     from grade import check_thresholds, grade  # local import: same directory
 
-    metrics = grade(vault, manifest)
+    metrics = grade(jotd_dir, manifest)
     (GOLDEN / "expected.json").write_text(json.dumps(metrics, indent=1), encoding="utf-8")
     print(
         f"golden regenerated: routing {metrics['routing_hits']}/{metrics['n']}, "

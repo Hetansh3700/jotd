@@ -21,7 +21,7 @@ def send(title: str, message: str, channel: str = "macos") -> str:
         raise ValueError(f"unknown channel: {channel} (macos|stdout)")
     if shutil.which("terminal-notifier"):
         subprocess.run(
-            ["terminal-notifier", "-title", title, "-message", message, "-group", "vault"],
+            ["terminal-notifier", "-title", title, "-message", message, "-group", "jotd"],
             check=False,
             capture_output=True,
             timeout=10,

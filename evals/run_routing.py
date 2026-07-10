@@ -1,14 +1,14 @@
 """Routing eval harness — HUMAN-RUN, never CI (it spends real LLM tokens).
 
-Builds a throwaway vault from the seed fixture, appends the 28 labeled captures,
+Builds a throwaway jotd directory from the seed fixture, appends the 28 labeled captures,
 runs a headless `claude -p "/organize"` against it, and grades the result with
 the deterministic grader. CI instead grades the committed golden run
 (tests/test_grader.py), so the grader itself can't rot between human runs.
 
 Usage:
   python evals/run_routing.py                 # full run (requires claude login)
-  python evals/run_routing.py --keep          # keep the temp vault for autopsy
-  python evals/run_routing.py --grade-only evals/golden/vault  # no LLM, re-grade
+  python evals/run_routing.py --keep          # keep the temp dir for autopsy
+  python evals/run_routing.py --grade-only evals/golden/jotd  # no LLM, re-grade
 """
 
 from __future__ import annotations
@@ -36,23 +36,23 @@ CLAUDE_ARGS = [
     "json",
     "--max-turns",
     "250",
-    # The temp vault is an untrusted workspace, so headless claude ignores the
+    # The temp dir is an untrusted workspace, so headless claude ignores the
     # permissions.allow entries in its .claude/settings.json (the deny rules
-    # still apply). Grant the vault CLI explicitly — CLI flags express caller
+    # still apply). Grant the jotd CLI explicitly — CLI flags express caller
     # intent and are honored regardless of workspace trust.
     "--allowedTools",
-    "Bash(vault unprocessed:*)",
-    "Bash(vault mark-processed:*)",
-    "Bash(vault derive:*)",
+    "Bash(jotd unprocessed:*)",
+    "Bash(jotd mark-processed:*)",
+    "Bash(jotd derive:*)",
 ]
 
 
-def build_eval_vault(tmp: Path) -> list[dict]:
-    from vault import inbox
-    from vault.init import scaffold
+def build_eval_jotd_dir(tmp: Path) -> list[dict]:
+    from jotd import inbox
+    from jotd.init import scaffold
 
     scaffold(tmp, git=False, pointer=False)
-    shutil.copytree(EVALS / "fixtures" / "seed-vault" / "notes", tmp / "notes", dirs_exist_ok=True)
+    shutil.copytree(EVALS / "fixtures" / "seed-jotd" / "notes", tmp / "notes", dirs_exist_ok=True)
 
     fixtures = [
         json.loads(line)
@@ -71,10 +71,10 @@ def build_eval_vault(tmp: Path) -> list[dict]:
 
 def run_organize(tmp: Path, model: str) -> dict:
     env = dict(os.environ)
-    # the librarian shells out to `vault unprocessed` / `vault mark-processed`;
+    # the librarian shells out to `jotd unprocessed` / `jotd mark-processed`;
     # make sure the venv's console script wins on PATH
     env["PATH"] = str(Path(sys.executable).parent) + os.pathsep + env.get("PATH", "")
-    env["VAULT_DIR"] = str(tmp)
+    env["JOTD_DIR"] = str(tmp)
     cmd = ["claude", "-p", "/organize", "--model", model, *CLAUDE_ARGS]
     print(f"$ {' '.join(cmd)}  (cwd={tmp})")
     proc = subprocess.run(cmd, cwd=tmp, env=env, capture_output=True, text=True, timeout=2400)
@@ -119,25 +119,25 @@ def report(metrics: dict, gates: dict, out_dir: Path, model: str, session: dict 
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default="sonnet")
-    ap.add_argument("--keep", action="store_true", help="keep the temp vault for autopsy")
-    ap.add_argument("--grade-only", metavar="VAULT_DIR", help="grade an existing vault, no LLM")
+    ap.add_argument("--keep", action="store_true", help="keep the temp dir for autopsy")
+    ap.add_argument("--grade-only", metavar="JOTD_DIR", help="grade an existing jotd dir, no LLM")
     args = ap.parse_args()
 
     if args.grade_only:
-        vault_dir = Path(args.grade_only)
-        manifest_path = vault_dir / "manifest.json"
+        jotd_dir = Path(args.grade_only)
+        manifest_path = jotd_dir / "manifest.json"
         if not manifest_path.exists():
-            manifest_path = vault_dir.parent / "manifest.json"
+            manifest_path = jotd_dir.parent / "manifest.json"
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-        metrics = grade(vault_dir, manifest)
+        metrics = grade(jotd_dir, manifest)
         gates = check_thresholds(metrics)
         print(json.dumps({k: v for k, v in metrics.items() if k != "per_capture"}, indent=2))
         print(f"gates: {gates}")
         return 0 if gates["overall"] else 1
 
-    tmp = Path(tempfile.mkdtemp(prefix="vault-eval-"))
+    tmp = Path(tempfile.mkdtemp(prefix="jotd-eval-"))
     try:
-        manifest = build_eval_vault(tmp)
+        manifest = build_eval_jotd_dir(tmp)
         session = run_organize(tmp, args.model)
         metrics = grade(tmp, manifest)
         gates = check_thresholds(metrics)
@@ -147,7 +147,7 @@ def main() -> int:
         return 0 if gates["overall"] else 1
     finally:
         if args.keep:
-            print(f"temp vault kept: {tmp}")
+            print(f"temp dir kept: {tmp}")
         else:
             shutil.rmtree(tmp, ignore_errors=True)
 

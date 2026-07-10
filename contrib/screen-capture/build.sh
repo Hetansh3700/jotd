@@ -4,5 +4,5 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 mkdir -p bin
-xcrun swiftc -O ocr.swift -o bin/vault-screen-ocr
-echo "built bin/vault-screen-ocr ($(uname -m))"
+xcrun swiftc -O ocr.swift -o bin/jotd-screen-ocr
+echo "built bin/jotd-screen-ocr ($(uname -m))"

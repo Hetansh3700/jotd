@@ -12,14 +12,14 @@ endobj
 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
 endobj
 5 0 obj
-<< /Length 615 >>
+<< /Length 610 >>
 stream
 1 1 1 rg 0 0 612 792 re f
 0 0 0 rg
 BT /F1 12 Tf 16 TL 50 730 Td
 (The pulse enforces a strict interruption) Tj T*
 (budget: at most three nudges per run and) Tj T*
-(six per day. The vault runs three pulses) Tj T*
+(six per day. jotd runs three pulses) Tj T*
 (per day by default, and every decision) Tj T*
 (to stay silent is logged with a reason.) Tj T*
 (Restraint is the product surface, not) Tj T*
@@ -44,5 +44,5 @@ xref
 trailer
 << /Size 6 /Root 1 0 R >>
 startxref
-976
+971
 %%EOF

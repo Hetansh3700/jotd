@@ -1,31 +1,31 @@
 #!/bin/bash
 # Required parameters:
 # @raycast.schemaVersion 1
-# @raycast.title Vault Screen Capture
+# @raycast.title Jotd Screen Capture
 # @raycast.mode silent
 #
 # Optional parameters:
 # @raycast.icon 🗃️
-# @raycast.packageName Vault
+# @raycast.packageName Jotd
 #
 # Documentation:
-# @raycast.description Region-grab → on-device OCR → vault inbox (append-only)
+# @raycast.description Region-grab → on-device OCR → jotd inbox (append-only)
 #
 # Also runnable from any terminal or hotkey tool; the @raycast headers are inert
 # comments elsewhere. `--json` prints the capture-contract JSON instead of writing
-# to the vault (used by evals/capture/run_capture.py).
+# to the jotd inbox (used by evals/capture/run_capture.py).
 
 set -u
 export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-OCR="$DIR/bin/vault-screen-ocr"
+OCR="$DIR/bin/jotd-screen-ocr"
 JSON_MODE=0
 [ "${1:-}" = "--json" ] && JSON_MODE=1
 
 notify() {
     osascript -e 'on run argv' \
-        -e 'display notification (item 1 of argv) with title "vault capture"' \
+        -e 'display notification (item 1 of argv) with title "jotd capture"' \
         -e 'end run' "$1" >/dev/null 2>&1
 }
 
@@ -71,10 +71,10 @@ if [ "$JSON_MODE" = 1 ]; then
     exit 0
 fi
 
-if ! ERRMSG="$(printf '%s' "$TEXT" | vault capture - --source screen \
+if ! ERRMSG="$(printf '%s' "$TEXT" | jotd capture - --source screen \
     ${APP:+--app "$APP"} ${TITLE:+--title "$TITLE"} --method region 2>&1)"; then
-    notify "vault rejected the capture: $ERRMSG"
-    echo "vault capture: $ERRMSG" >&2
+    notify "jotd rejected the capture: $ERRMSG"
+    echo "jotd capture: $ERRMSG" >&2
     exit 1
 fi
 # success is silent — the launcher's HUD is confirmation enough

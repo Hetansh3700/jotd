@@ -2,14 +2,14 @@ import json
 from datetime import date
 from pathlib import Path
 
-from vault import pulselog
-from vault.derive import derive
+from jotd import pulselog
+from jotd.derive import derive
 
 TODAY = date(2026, 7, 8)
 
 
-def make_vault(tmp_path: Path) -> Path:
-    (tmp_path / "vault.toml").write_text("")
+def make_jotd_dir(tmp_path: Path) -> Path:
+    (tmp_path / "jotd.toml").write_text("")
     (tmp_path / "state").mkdir()
     people = tmp_path / "notes" / "people"
     people.mkdir(parents=True)
@@ -55,34 +55,36 @@ def make_vault(tmp_path: Path) -> Path:
 
 
 def test_derive_is_idempotent(tmp_path):
-    vault = make_vault(tmp_path)
-    first = derive(vault, today=TODAY)
+    jotd_dir = make_jotd_dir(tmp_path)
+    first = derive(jotd_dir, today=TODAY)
     assert first["stamped"] == 1
-    snapshot = {p: p.read_bytes() for p in vault.rglob("*") if p.is_file()}
-    second = derive(vault, today=TODAY)
+    snapshot = {p: p.read_bytes() for p in jotd_dir.rglob("*") if p.is_file()}
+    second = derive(jotd_dir, today=TODAY)
     assert second["stamped"] == 0
-    assert {p: p.read_bytes() for p in vault.rglob("*") if p.is_file()} == snapshot
+    assert {p: p.read_bytes() for p in jotd_dir.rglob("*") if p.is_file()} == snapshot
 
 
 def test_statuses_and_staleness(tmp_path):
-    vault = make_vault(tmp_path)
+    jotd_dir = make_jotd_dir(tmp_path)
     # two drops on the postmortem loop -> silenced forever
     ts = "2026-07-06T09:00:00-07:00"
-    pulselog.append_event(vault, "response", ts, loop_id="cap-20260701-090000-cccc", action="drop")
-    pulselog.append_event(vault, "response", ts, loop_id="cap-20260701-090000-cccc", action="drop")
+    for _ in range(2):
+        pulselog.append_event(
+            jotd_dir, "response", ts, loop_id="cap-20260701-090000-cccc", action="drop"
+        )
     # pagerduty loop snoozed into the future
     pulselog.append_event(
-        vault,
+        jotd_dir,
         "response",
         ts,
         loop_id="cap-20260706-090000-dddd",
         action="snooze",
         until="2026-07-11",
     )
-    derive(vault, today=TODAY)
+    derive(jotd_dir, today=TODAY)
     loops = {
         lp["id"]: lp
-        for lp in json.loads((vault / "state" / "open-loops.json").read_text())["loops"]
+        for lp in json.loads((jotd_dir / "state" / "open-loops.json").read_text())["loops"]
     }
     assert loops["cap-20260620-090000-eeee"]["status"] == "done"
     assert loops["cap-20260701-090000-cccc"]["status"] == "silenced"
@@ -94,36 +96,36 @@ def test_statuses_and_staleness(tmp_path):
     assert sarah["stale"] is True  # 5d old, no note activity since
     assert sarah["owner"] == "sarah"
 
-    md = (vault / "state" / "open-loops.md").read_text()
+    md = (jotd_dir / "state" / "open-loops.md").read_text()
     assert "chase the security sign-off" in md
     assert "Silenced" in md and "postmortem" in md
 
 
 def test_later_activity_defeats_staleness(tmp_path):
-    vault = make_vault(tmp_path)
-    log = vault / "state" / "processed.log"
+    jotd_dir = make_jotd_dir(tmp_path)
+    log = jotd_dir / "state" / "processed.log"
     log.write_text(
         log.read_text()
         + "cap-20260707-100000-ffff notes/people/sarah-chen.md 2026-07-07T10:00:00-07:00\n"
     )
-    derive(vault, today=TODAY)
+    derive(jotd_dir, today=TODAY)
     loops = {
         lp["id"]: lp
-        for lp in json.loads((vault / "state" / "open-loops.json").read_text())["loops"]
+        for lp in json.loads((jotd_dir / "state" / "open-loops.json").read_text())["loops"]
     }
     assert loops["cap-20260703-090000-aaaa"]["stale"] is False
 
 
 def test_hand_loop_first_seen_survives_rederive(tmp_path):
-    vault = make_vault(tmp_path)
-    derive(vault, today=TODAY)
-    loops = json.loads((vault / "state" / "open-loops.json").read_text())["loops"]
+    jotd_dir = make_jotd_dir(tmp_path)
+    derive(jotd_dir, today=TODAY)
+    loops = json.loads((jotd_dir / "state" / "open-loops.json").read_text())["loops"]
     hand = next(lp for lp in loops if lp["id"].startswith("l-"))
     assert hand["first_seen"] == TODAY.isoformat()
 
     later = date(2026, 7, 12)
-    derive(vault, today=later)
-    loops = json.loads((vault / "state" / "open-loops.json").read_text())["loops"]
+    derive(jotd_dir, today=later)
+    loops = json.loads((jotd_dir / "state" / "open-loops.json").read_text())["loops"]
     hand2 = next(lp for lp in loops if lp["id"] == hand["id"])
     assert hand2["first_seen"] == TODAY.isoformat()
     assert hand2["age_days"] == 4
@@ -131,9 +133,9 @@ def test_hand_loop_first_seen_survives_rederive(tmp_path):
 
 
 def test_entities_index(tmp_path):
-    vault = make_vault(tmp_path)
-    derive(vault, today=TODAY)
-    entities = json.loads((vault / "state" / "entities.json").read_text())["entities"]
+    jotd_dir = make_jotd_dir(tmp_path)
+    derive(jotd_dir, today=TODAY)
+    entities = json.loads((jotd_dir / "state" / "entities.json").read_text())["entities"]
     assert entities["sarah-chen"]["aliases"] == ["Sarah", "schen"]
     assert entities["sarah-chen"]["mentions"] == 1  # [[sarah-chen]] in atlas.md
     assert entities["atlas"]["last_seen"] == "2026-07-06"

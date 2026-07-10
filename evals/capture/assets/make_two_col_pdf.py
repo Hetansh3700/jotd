@@ -11,7 +11,7 @@ from pathlib import Path
 LEFT = [
     "The pulse enforces a strict interruption",
     "budget: at most three nudges per run and",
-    "six per day. The vault runs three pulses",
+    "six per day. jotd runs three pulses",
     "per day by default, and every decision",
     "to stay silent is logged with a reason.",
     "Restraint is the product surface, not",

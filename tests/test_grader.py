@@ -19,13 +19,13 @@ def load_golden():
 
 def test_golden_metrics_exact():
     manifest, expected = load_golden()
-    metrics = grade(GOLDEN / "vault", manifest)
+    metrics = grade(GOLDEN / "jotd", manifest)
     assert metrics == expected
 
 
 def test_golden_defects_detected():
     manifest, _ = load_golden()
-    metrics = grade(GOLDEN / "vault", manifest)
+    metrics = grade(GOLDEN / "jotd", manifest)
     # three planted defects: two misroutes, one missed loop stamp
     assert metrics["routing_hits"] == metrics["n"] - 2
     assert metrics["loops_found"] == metrics["loops_expected"] - 1
@@ -38,8 +38,8 @@ def test_golden_defects_detected():
 
 def test_inbox_mutation_detected(tmp_path):
     manifest, _ = load_golden()
-    work = tmp_path / "vault"
-    shutil.copytree(GOLDEN / "vault", work)
+    work = tmp_path / "jotd"
+    shutil.copytree(GOLDEN / "jotd", work)
     inbox = next((work / "inbox").glob("*.jsonl"))
     inbox.write_text(inbox.read_text() + '{"id":"cap-x","text":"smuggled"}\n')
     assert grade(work, manifest)["inbox_intact"] is False
@@ -47,8 +47,8 @@ def test_inbox_mutation_detected(tmp_path):
 
 def test_missing_processed_entry_detected(tmp_path):
     manifest, _ = load_golden()
-    work = tmp_path / "vault"
-    shutil.copytree(GOLDEN / "vault", work)
+    work = tmp_path / "jotd"
+    shutil.copytree(GOLDEN / "jotd", work)
     log = work / "state" / "processed.log"
     lines = log.read_text().splitlines()
     log.write_text("\n".join(lines[1:]) + "\n")
@@ -60,8 +60,8 @@ def test_missing_processed_entry_detected(tmp_path):
 def test_glob_never_matches_unsorted(tmp_path):
     """'topics/*' must not be satisfiable by a dump into topics/unsorted."""
     manifest, _ = load_golden()
-    work = tmp_path / "vault"
-    shutil.copytree(GOLDEN / "vault", work)
+    work = tmp_path / "jotd"
+    shutil.copytree(GOLDEN / "jotd", work)
     # find the new-topic capture (expected topics/*) and reroute it to unsorted
     entry = next(m for m in manifest if m["expect"].get("class") == "topic-new")
     cap_id = entry["record"]["id"]

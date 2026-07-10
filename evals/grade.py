@@ -1,11 +1,11 @@
 """Deterministic grader for the routing eval. No LLM anywhere in this file.
 
-Grades a vault directory after an /organize run against a manifest of labeled
+Grades a jotd directory after an /organize run against a manifest of labeled
 captures. The grader is itself under test (tests/test_grader.py grades the
 committed golden run and asserts exact metrics), so CI keeps it honest even
 though CI never runs the LLM.
 
-Target patterns in fixtures are vault paths relative to notes/ without .md
+Target patterns in fixtures are paths relative to notes/ without .md
 ("people/sarah-chen"). A pattern containing "*" is an fnmatch glob with one
 carve-out: globs NEVER match topics/unsorted — "route somewhere real in this
 category" and "correctly give up" must stay distinguishable classes.
@@ -26,7 +26,7 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from vault.formats import dump_capture_line, parse_loop_line, parse_processed_line  # noqa: E402
+from jotd.formats import dump_capture_line, parse_loop_line, parse_processed_line  # noqa: E402
 
 THRESHOLDS = {"routing_accuracy": 0.85, "loop_recall": 0.90}
 
@@ -37,7 +37,7 @@ def _norm(path: str) -> str:
     return p.removesuffix(".md")
 
 
-def _pattern_hit(pattern: str, routed: list[str], vault_dir: Path, capture_id: str) -> bool:
+def _pattern_hit(pattern: str, routed: list[str], jotd_dir: Path, capture_id: str) -> bool:
     for path in routed:
         norm = _norm(path)
         if "*" in pattern:
@@ -45,14 +45,14 @@ def _pattern_hit(pattern: str, routed: list[str], vault_dir: Path, capture_id: s
                 continue
         elif norm != pattern:
             continue
-        target = vault_dir / path
+        target = jotd_dir / path
         if target.is_file() and capture_id in target.read_text(encoding="utf-8"):
             return True
     return False
 
 
-def _read_processed(vault_dir: Path) -> dict[str, list[str]]:
-    log = vault_dir / "state" / "processed.log"
+def _read_processed(jotd_dir: Path) -> dict[str, list[str]]:
+    log = jotd_dir / "state" / "processed.log"
     entries: dict[str, list[str]] = {}
     if not log.is_file():
         return entries
@@ -67,19 +67,19 @@ def _read_processed(vault_dir: Path) -> dict[str, list[str]]:
     return entries
 
 
-def _scan_open_loops(vault_dir: Path) -> dict[str, str]:
+def _scan_open_loops(jotd_dir: Path) -> dict[str, str]:
     """All stamped OPEN loop ids across notes -> containing file."""
     loops: dict[str, str] = {}
-    for md in sorted((vault_dir / "notes").rglob("*.md")):
+    for md in sorted((jotd_dir / "notes").rglob("*.md")):
         for line in md.read_text(encoding="utf-8").splitlines():
             parsed = parse_loop_line(line)
             if parsed and parsed["state"] == "open":
-                loops[parsed["id"]] = str(md.relative_to(vault_dir))
+                loops[parsed["id"]] = str(md.relative_to(jotd_dir))
     return loops
 
 
-def _inbox_bytes(vault_dir: Path) -> bytes:
-    files = sorted((vault_dir / "inbox").glob("*.jsonl"))
+def _inbox_bytes(jotd_dir: Path) -> bytes:
+    files = sorted((jotd_dir / "inbox").glob("*.jsonl"))
     return b"".join(f.read_bytes() for f in files)
 
 
@@ -87,9 +87,9 @@ def expected_inbox_bytes(manifest: list[dict[str, Any]]) -> bytes:
     return "".join(dump_capture_line(m["record"]) for m in manifest).encode("utf-8")
 
 
-def grade(vault_dir: Path, manifest: list[dict[str, Any]]) -> dict[str, Any]:
-    processed = _read_processed(vault_dir)
-    open_loops = _scan_open_loops(vault_dir)
+def grade(jotd_dir: Path, manifest: list[dict[str, Any]]) -> dict[str, Any]:
+    processed = _read_processed(jotd_dir)
+    open_loops = _scan_open_loops(jotd_dir)
 
     per_capture = []
     routing_hits = 0
@@ -103,7 +103,7 @@ def grade(vault_dir: Path, manifest: list[dict[str, Any]]) -> dict[str, Any]:
         routed = processed.get(cap_id, [])
         if not routed or "<duplicate>" in routed:
             complete = False
-        missing = [p for p in expect["targets"] if not _pattern_hit(p, routed, vault_dir, cap_id)]
+        missing = [p for p in expect["targets"] if not _pattern_hit(p, routed, jotd_dir, cap_id)]
         ok = not missing and bool(routed)
         routing_hits += ok
 
@@ -139,7 +139,7 @@ def grade(vault_dir: Path, manifest: list[dict[str, Any]]) -> dict[str, Any]:
         "loop_recall": round(loops_found / loops_expected, 4) if loops_expected else 1.0,
         "loops_stamped": len(stamped),
         "loop_precision": round(expected_true_found / len(stamped), 4) if stamped else 1.0,
-        "inbox_intact": _inbox_bytes(vault_dir) == expected_inbox_bytes(manifest),
+        "inbox_intact": _inbox_bytes(jotd_dir) == expected_inbox_bytes(manifest),
         "processed_complete": complete,
         "per_capture": per_capture,
     }
@@ -156,11 +156,11 @@ def check_thresholds(metrics: dict[str, Any]) -> dict[str, bool]:
 
 def main() -> int:
     if len(sys.argv) != 3:
-        print("usage: python evals/grade.py <vault_dir> <manifest.json>", file=sys.stderr)
+        print("usage: python evals/grade.py <jotd_dir> <manifest.json>", file=sys.stderr)
         return 2
-    vault_dir = Path(sys.argv[1])
+    jotd_dir = Path(sys.argv[1])
     manifest = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
-    metrics = grade(vault_dir, manifest)
+    metrics = grade(jotd_dir, manifest)
     gates = check_thresholds(metrics)
     print(json.dumps({"metrics": metrics, "gates": gates}, indent=2))
     return 0 if gates["overall"] else 1

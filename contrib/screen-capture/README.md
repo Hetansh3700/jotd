@@ -1,8 +1,8 @@
-# vault screen capture (Tier A)
+# jotd screen capture (Tier A)
 
-Hotkey → drag a region → on-device OCR → your vault inbox. The screenshot is
+Hotkey → drag a region → on-device OCR → your jotd inbox. The screenshot is
 deleted the moment text is extracted; only text ever persists, and it goes
-through `vault capture` — the same tested append-only writer as every other
+through `jotd capture` — the same tested append-only writer as every other
 capture. This client never touches inbox files.
 
 ## Setup
@@ -10,7 +10,7 @@ capture. This client never touches inbox files.
 ```bash
 cd contrib/screen-capture
 ./build.sh                        # needs Xcode CLT (xcode-select --install)
-./vault-screen-capture.sh         # first run: macOS prompts for Screen Recording
+./jotd-screen-capture.sh         # first run: macOS prompts for Screen Recording
 ```
 
 **Permissions (one-time):** `screencapture` needs Screen Recording granted to
@@ -21,7 +21,7 @@ helper read the frontmost window title; nothing else in the pipeline touches
 permissions.
 
 **Raycast:** add `contrib/screen-capture` as a Script Directory (the script
-carries `@raycast` headers), then bind "Vault Screen Capture" to a hotkey.
+carries `@raycast` headers), then bind "Jotd Screen Capture" to a hotkey.
 Works equally from Apple Shortcuts or a plain shell alias.
 
 ## What lands in the inbox
@@ -36,7 +36,7 @@ Works equally from Apple Shortcuts or a plain shell alias.
 
 ## Limits & troubleshooting
 
-- **Captures are capped at 4 KB serialized.** vault rejects (never truncates)
+- **Captures are capped at 4 KB serialized.** jotd rejects (never truncates)
   oversized grabs and you get a notification — re-grab a smaller region.
 - **Two-column PDFs:** the region selection is the column selector; grab one
   column at a time.
@@ -50,5 +50,5 @@ Works equally from Apple Shortcuts or a plain shell alias.
   System Settings → Privacy & Security → Screen & System Audio Recording,
   enable it, then quit and relaunch the launcher. macOS may re-confirm this
   grant periodically.
-- `./vault-screen-capture.sh --json` prints the capture instead of saving it —
+- `./jotd-screen-capture.sh --json` prints the capture instead of saving it —
   used by `evals/capture/run_capture.py` to grade capture quality.
