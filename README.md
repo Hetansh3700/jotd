@@ -38,4 +38,4 @@ python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
 python evals/run_routing.py    # the LLM product gate (requires claude login)
 ```
 
-Apache-2.0.
+MIT.
