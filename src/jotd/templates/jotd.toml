@@ -1,4 +1,4 @@
-# jotd configuration — see https://github.com/hetanshpatel/jotd-by-claude
+# jotd configuration — see https://github.com/hetanshpatel/jotd
 # The pulse defaults are deliberately conservative. Loosen them only after a
 # couple of weeks of dogfood; proactive agents die by noise, not by silence.
 
