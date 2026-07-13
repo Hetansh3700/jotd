@@ -222,6 +222,55 @@ def schedule_status() -> None:
         typer.echo(line)
 
 
+@app.command("install")
+def install_cmd(
+    target: Annotated[str, typer.Argument(help="integration to install (claude-code)")],
+    hook: Annotated[
+        bool, typer.Option("--hook", help="also auto-capture sessions via a SessionEnd hook")
+    ] = False,
+    upgrade: Annotated[bool, typer.Option(help="re-sync unmodified managed files")] = False,
+) -> None:
+    """Install the global /jotd:session command (and optional session-end hook)."""
+    if target != "claude-code":
+        typer.echo(f"error: unknown install target {target!r} (try: claude-code)", err=True)
+        raise typer.Exit(2)
+    from jotd.install import install_claude_code
+
+    for line in install_claude_code(hook=hook, upgrade=upgrade):
+        typer.echo(line)
+
+
+@app.command("uninstall")
+def uninstall_cmd(
+    target: Annotated[str, typer.Argument(help="integration to remove (claude-code)")],
+) -> None:
+    """Remove the global command files and the SessionEnd hook."""
+    if target != "claude-code":
+        typer.echo(f"error: unknown install target {target!r} (try: claude-code)", err=True)
+        raise typer.Exit(2)
+    from jotd.install import uninstall_claude_code
+
+    for line in uninstall_claude_code():
+        typer.echo(line)
+
+
+hook_app = typer.Typer(no_args_is_help=True, add_completion=False)
+app.add_typer(hook_app, name="hook", help="Claude Code hook entry points (machine-invoked)")
+
+
+@hook_app.command("session-end")
+def hook_session_end() -> None:
+    """SessionEnd hook: distill the ended session into captures. Never fails loudly."""
+    try:
+        from jotd.session_capture import run_session_end
+
+        payload = json.loads(sys.stdin.read())
+        if isinstance(payload, dict):
+            run_session_end(payload)
+    except Exception:  # noqa: BLE001 — a hook must never break the user's session end
+        pass
+
+
 @app.command()
 def status(directory: DirOpt = None) -> None:
     """Health check: inbox backlog, open loops, last pulse heartbeat, schedule."""

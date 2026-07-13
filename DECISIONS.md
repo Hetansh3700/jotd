@@ -133,3 +133,45 @@ they are records, not docs. The D0 HashiCorp binary collision is moot with a CLI
 binary (stale installs). two-col.pdf was regenerated (byte-deterministic generator) because
 its sample text named the old product. Verify `jotd-by-claude` is free on PyPI before the
 first publish.
+
+## D11 — Session capture: global /jotd:session command + opt-in SessionEnd hook (2026-07-13)
+
+Claude Code sessions become a capture source, both pull and (opt-in) push. `jotd install
+claude-code` installs `templates/global/commands/jotd/session.md` into
+`~/.claude/commands/jotd/` — available in every CC session — reusing init's sha256-manifest
+loop (extracted as `init.sync_managed_files`). The manifest lives at
+`~/.config/jotd/global-manifest.json`: jotd bookkeeping stays out of `~/.claude`. The
+walker in `_template_files()` skips `templates/global/` — without that exclusion the rglob
+would scaffold `session.md` into every data dir on `init --upgrade` (regression-tested).
+
+Decisions that matter:
+
+1. **The manual path is a command file, not an agent.** A subagent never sees the parent
+   conversation; only the main agent can distill its own session. It pipes each fragment
+   via quoted heredoc into `jotd capture - --source claude-code` — argv quoting is a trap,
+   stdin is the contract (same as the screen client). Zero CLI changes: `source` is
+   free-form and `{app,title,method}` fit (`app: Claude Code`, `title: <repo dir>`,
+   `method: session` manual / `session-end` hook).
+2. **The hook never fails and never truncates.** `jotd hook session-end` wraps its whole
+   body in try/except and exits 0 unconditionally — a notes tool must never break a coding
+   session. Model output is drafted only: code enforces the fragment budget (max 6), the
+   per-fragment char cap, and the 4096-byte line cap (reject, log, continue — D1). Every
+   skip/reject/error is logged to `state/logs/session-hook.log` (silence is logged — same
+   posture as the pulse).
+3. **Two independent recursion breakers.** The scribe's own `claude -p` (and the pulse's)
+   fire SessionEnd too: the scribe subprocess carries `JOTD_SESSION_HOOK=1` in its env,
+   and any session whose cwd is the data dir is skipped. Either alone would suffice;
+   both are cheap and the failure mode (fork bomb of headless claudes) is expensive.
+4. **The scribe gets a digest, not tool access.** Python compacts the transcript JSONL
+   (user/assistant text only, tool noise dropped, first-user-message + tail under a char
+   budget) and the scribe runs with no tools, one turn, cwd = the data dir — the only
+   directory known to be trusted for headless runs (D7).
+5. **Dedupe reads tool_use blocks, not raw text.** A session that already ran
+   `/jotd:session` (a Bash tool_use whose command contains `--source claude-code`) is
+   skipped; matching raw transcript text would false-positive on any session that merely
+   read or edited files mentioning the command (e.g. working on jotd itself).
+6. **settings.json is merged, never clobbered.** `--hook` parses `~/.claude/settings.json`,
+   appends one SessionEnd entry (idempotent by marker substring, `timeout: 120` — the
+   scribe needs ~60s and CC's default would kill it), and preserves every unknown key.
+   Unparseable settings abort the merge untouched. Uninstall removes only entries matching
+   the marker and only files whose hash still matches the manifest.

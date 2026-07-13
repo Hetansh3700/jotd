@@ -15,15 +15,13 @@ from __future__ import annotations
 
 import fcntl
 import json
-import shutil
-import subprocess
 import time
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
 from jotd import budget as budget_mod
-from jotd import notify, pulselog
+from jotd import headless, notify, pulselog
 from jotd.config import PulseConfig, load_config
 from jotd.derive import derive
 
@@ -117,10 +115,7 @@ def build_packet(data_dir: Path, cfg: PulseConfig, slot: str, today: date) -> di
 
 
 def _extract_json(text: str) -> dict[str, Any]:
-    start, end = text.find("{"), text.rfind("}")
-    if start < 0 or end <= start:
-        raise ValueError("no JSON object in model output")
-    return json.loads(text[start : end + 1])
+    return headless.extract_json(text)
 
 
 def validate_output(obj: Any) -> list[str]:
@@ -147,41 +142,15 @@ def validate_output(obj: Any) -> list[str]:
 
 
 def _invoke_claude(data_dir: Path, cfg: PulseConfig, prompt: str, agent_body: str) -> str:
-    claude = shutil.which("claude")
-    if not claude:
-        raise RuntimeError("claude CLI not on PATH")
-    cmd = [
-        claude,
-        "-p",
+    return headless.invoke_claude(
         prompt,
-        "--model",
-        cfg.model,
-        "--append-system-prompt",
-        agent_body,
-        "--allowedTools",
-        "Read",
-        "Grep",
-        "Glob",
-        "--disallowedTools",
-        "Bash",
-        "Edit",
-        "Write",
-        "WebSearch",
-        "WebFetch",
-        "--output-format",
-        "json",
-        "--max-turns",
-        "15",
-    ]
-    proc = subprocess.run(
-        cmd, cwd=data_dir, capture_output=True, text=True, timeout=CLAUDE_TIMEOUT_S
+        cwd=data_dir,
+        model=cfg.model,
+        system_prompt=agent_body,
+        allowed_tools=("Read", "Grep", "Glob"),
+        max_turns=15,
+        timeout_s=CLAUDE_TIMEOUT_S,
     )
-    if proc.returncode != 0:
-        raise RuntimeError(f"claude exited {proc.returncode}: {proc.stderr[-400:]}")
-    envelope = json.loads(proc.stdout)
-    if envelope.get("is_error"):
-        raise RuntimeError(f"claude reported error: {str(envelope.get('result'))[:400]}")
-    return envelope.get("result", "")
 
 
 def _write_brief(data_dir: Path, today: date, brief_md: str, packet: dict[str, Any]) -> Path:

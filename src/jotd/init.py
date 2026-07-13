@@ -49,6 +49,8 @@ def _template_files() -> dict[str, Path]:
         if not src.is_file():
             continue
         rel = src.relative_to(TEMPLATES)
+        if rel.parts[0] == "global":
+            continue  # installed into ~/.claude by `jotd install`, never into data dirs
         if rel.parts[0] in ("agents", "commands"):
             out[str(Path(".claude") / rel)] = src
         elif rel.name == "gitignore":
@@ -58,6 +60,47 @@ def _template_files() -> dict[str, Path]:
         else:
             out[rel.name] = src
     return out
+
+
+def sync_managed_files(
+    files: dict[str, Path],
+    root: Path,
+    manifest_path: Path,
+    *,
+    upgrade: bool = False,
+) -> list[str]:
+    """Install/upgrade `files` (root-relative path -> packaged source) under `root`.
+
+    The sha256 manifest gates every overwrite: a file is upgraded only when its
+    current content still matches the recorded hash. Hand-edited files are
+    skipped with a warning, never clobbered.
+    """
+    actions: list[str] = []
+    manifest: dict[str, str] = {}
+    if manifest_path.is_file():
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    for rel, src in files.items():
+        target = root / rel
+        content = src.read_bytes()
+        if not target.exists():
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(content)
+            manifest[rel] = _sha(content)
+            actions.append(f"installed {rel}")
+        elif upgrade:
+            current = _sha(target.read_bytes())
+            if current == manifest.get(rel):
+                if current != _sha(content):
+                    target.write_bytes(content)
+                    manifest[rel] = _sha(content)
+                    actions.append(f"upgraded {rel}")
+            else:
+                actions.append(f"skipped {rel} (hand-edited; diff against the packaged template)")
+
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_path.write_text(json.dumps(manifest, indent=1, sort_keys=True), encoding="utf-8")
+    return actions
 
 
 def scaffold(
@@ -77,28 +120,9 @@ def scaffold(
     for sub in NOTE_DIRS:
         (data_dir / "notes" / sub).mkdir(parents=True, exist_ok=True)
 
-    manifest_path = data_dir / MANIFEST
-    manifest: dict[str, str] = {}
-    if manifest_path.is_file():
-        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-
-    for rel, src in _template_files().items():
-        target = data_dir / rel
-        content = src.read_bytes()
-        if not target.exists():
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_bytes(content)
-            manifest[rel] = _sha(content)
-            actions.append(f"installed {rel}")
-        elif upgrade:
-            current = _sha(target.read_bytes())
-            if current == manifest.get(rel):
-                if current != _sha(content):
-                    target.write_bytes(content)
-                    manifest[rel] = _sha(content)
-                    actions.append(f"upgraded {rel}")
-            else:
-                actions.append(f"skipped {rel} (hand-edited; diff against the packaged template)")
+    actions += sync_managed_files(
+        _template_files(), data_dir, data_dir / MANIFEST, upgrade=upgrade
+    )
 
     unsorted = data_dir / "notes" / "topics" / "unsorted.md"
     if not unsorted.exists():
@@ -106,8 +130,6 @@ def scaffold(
 
         unsorted.write_text(UNSORTED.format(today=today or date.today().isoformat()))
         actions.append("installed notes/topics/unsorted.md")
-
-    manifest_path.write_text(json.dumps(manifest, indent=1, sort_keys=True), encoding="utf-8")
 
     if git and not (data_dir / ".git").exists() and shutil.which("git"):
         subprocess.run(["git", "init", "-q", "-b", "main"], cwd=data_dir, check=False)
