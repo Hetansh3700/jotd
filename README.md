@@ -69,6 +69,8 @@ jotd init ~/jotd                 # scaffold the folder, agents, and config
 cd ~/jotd && claude              # accept the workspace trust dialog once (headless runs need it)
 osascript -e 'display notification "test" with title "jotd"'   # approve the macOS notif prompt
 jotd schedule install            # install the 3×/day pulse (launchd)
+jotd install claude-code         # optional: /jotd:session in every Claude Code session
+                                 #   add --hook to auto-capture sessions when they end
 ```
 
 Two manual gates matter — each silently breaks the pulse if skipped:
@@ -92,6 +94,16 @@ pbpaste | jotd add -             # pipe from clipboard / stdin
 ```
 /organize                        # librarian routes → linker links → jotd derive
 ```
+
+**Capture a Claude Code session** — after `jotd install claude-code`, in ANY repo's session:
+
+```
+/jotd:session                    # distill this session into atomic captures
+```
+
+With `--hook`, sessions are also auto-distilled when they end (skipping trivial ones,
+`/clear`, and sessions you already captured manually). Every decision is logged to
+`state/logs/session-hook.log`. See [docs/session-capture.md](docs/session-capture.md).
 
 **Respond to nudges** — the loop id is in the notification text:
 
@@ -120,6 +132,7 @@ jotd pulse --now --dry-run       # decide, print what it would do, send/log noth
 | `/pulse` | Run a pulse now and show its reasoning (including suppressions) |
 | `/daily` | Print today's brief (or a morning dry-run preview) |
 | `/recall <question>` | Answer from your notes, with citations |
+| `/jotd:session` | Distill the current session into captures (global — works in any repo) |
 
 ## Concepts
 
