@@ -20,9 +20,13 @@ def _isolate(monkeypatch, tmp_path):
     return claude_dir
 
 
-def _session_end_entries():
+def _hook_event_entries(event):
     settings = json.loads(vinstall.SETTINGS_PATH.read_text())
-    return settings.get("hooks", {}).get("SessionEnd", [])
+    return settings.get("hooks", {}).get(event, [])
+
+
+def _session_end_entries():
+    return _hook_event_entries("SessionEnd")
 
 
 def test_global_templates_never_leak_into_data_dir_scaffold():
@@ -51,9 +55,46 @@ def test_hook_install_is_idempotent(tmp_path, monkeypatch):
     assert MARKER in hook["command"] and hook["command"].startswith("/fake/bin/jotd")
     assert hook["timeout"] == vinstall.HOOK_TIMEOUT_S
 
+    start_entries = _hook_event_entries("SessionStart")
+    assert len(start_entries) == 1
+    start_hook = start_entries[0]["hooks"][0]
+    assert vinstall.START_HOOK_MARKER in start_hook["command"]
+    assert start_hook["timeout"] == vinstall.START_HOOK_TIMEOUT_S
+
     actions = vinstall.install_claude_code(hook=True)  # rerun
     assert len(_session_end_entries()) == 1
-    assert any("already installed" in a for a in actions)
+    assert len(_hook_event_entries("SessionStart")) == 1
+    assert sum("already installed" in a for a in actions) == 2
+
+
+def test_old_session_end_only_install_gains_start_hook(tmp_path, monkeypatch):
+    # a pre-D12 install has only the SessionEnd entry; rerunning --hook adds SessionStart
+    _isolate(monkeypatch, tmp_path)
+    vinstall.SETTINGS_PATH.parent.mkdir(parents=True)
+    vinstall.SETTINGS_PATH.write_text(
+        json.dumps(
+            {
+                "hooks": {
+                    "SessionEnd": [
+                        {
+                            "hooks": [
+                                {
+                                    "type": "command",
+                                    "command": "/old/path/jotd hook session-end",
+                                    "timeout": 120,
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+        )
+    )
+    actions = vinstall.install_claude_code(hook=True)
+    assert any("SessionEnd hook already installed" in a for a in actions)
+    assert any(a.startswith("installed SessionStart hook") for a in actions)
+    assert len(_session_end_entries()) == 1
+    assert len(_hook_event_entries("SessionStart")) == 1
 
 
 def test_hook_merge_preserves_existing_settings(tmp_path, monkeypatch):
@@ -130,15 +171,20 @@ def test_uninstall_keeps_hand_edited_file_and_its_manifest_entry(tmp_path, monke
     assert "commands/jotd/session.md" in json.loads(vinstall.GLOBAL_MANIFEST.read_text())
 
 
-def test_uninstall_preserves_unrelated_session_end_hooks(tmp_path, monkeypatch):
+def test_uninstall_preserves_unrelated_hooks_in_both_events(tmp_path, monkeypatch):
     _isolate(monkeypatch, tmp_path)
     vinstall.SETTINGS_PATH.parent.mkdir(parents=True)
-    other = {"hooks": [{"type": "command", "command": "say goodbye"}]}
-    vinstall.SETTINGS_PATH.write_text(json.dumps({"hooks": {"SessionEnd": [other]}}))
+    other_end = {"hooks": [{"type": "command", "command": "say goodbye"}]}
+    other_start = {"hooks": [{"type": "command", "command": "say hello"}]}
+    vinstall.SETTINGS_PATH.write_text(
+        json.dumps({"hooks": {"SessionEnd": [other_end], "SessionStart": [other_start]}})
+    )
     vinstall.install_claude_code(hook=True)
     assert len(_session_end_entries()) == 2
+    assert len(_hook_event_entries("SessionStart")) == 2
     vinstall.uninstall_claude_code()
-    assert _session_end_entries() == [other]
+    assert _session_end_entries() == [other_end]
+    assert _hook_event_entries("SessionStart") == [other_start]
 
 
 def test_cli_rejects_unknown_target(tmp_path, monkeypatch):

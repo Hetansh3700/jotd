@@ -12,3 +12,6 @@ Process this jotd directory's inbox in two passes:
 
 Then summarize for the user in a few lines: captures processed, notes touched, loops opened,
 anything sent to unsorted, and the derive counts.
+
+If any jotd command refuses because this machine is not the librarian (team mode), stop
+immediately and tell the user — do not work around the guard or edit state files directly.

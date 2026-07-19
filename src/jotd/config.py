@@ -46,6 +46,29 @@ class PulseConfig:
     channel: str = "macos"  # macos | stdout (slack/email are v0.3+ config hooks)
 
 
+@dataclass
+class TeamConfig:
+    """The [team] table (D12). librarian is an author slug; None = solo mode.
+
+    Shared team facts live here (jotd.toml is committed and synced); per-machine
+    identity deliberately does NOT — see jotd.author.
+    """
+
+    librarian: str | None = None
+
+
+def load_team(data_dir: Path) -> TeamConfig:
+    cfg = TeamConfig()
+    toml_path = data_dir / "jotd.toml"
+    if not toml_path.is_file():
+        return cfg
+    data = tomllib.loads(toml_path.read_text(encoding="utf-8")).get("team", {})
+    librarian = data.get("librarian")
+    if isinstance(librarian, str) and librarian.strip():
+        cfg.librarian = librarian.strip()
+    return cfg
+
+
 def load_config(data_dir: Path) -> PulseConfig:
     cfg = PulseConfig()
     toml_path = data_dir / "jotd.toml"

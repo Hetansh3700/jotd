@@ -49,5 +49,7 @@ found later. You are fast, consistent, and you never lose provenance.
 
 - Never read or write `inbox/` files directly; `jotd unprocessed` is your only view of it.
 - Never write in `state/`; `jotd mark-processed` is the only way you record routing.
+- If `jotd mark-processed` refuses because this machine is not the librarian (team mode),
+  stop and tell the user — never work around the guard.
 - Every capture gets exactly one `mark-processed` call, and every path you name must be a
   file you actually wrote. No capture may be skipped — when in doubt, unsorted.

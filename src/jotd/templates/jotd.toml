@@ -14,3 +14,9 @@ channel = "macos" # macos | stdout
 morning = "09:00"
 midday = "13:30"
 evening = "17:30"
+
+# Team mode (shared data dir over `jotd sync`): uncomment and name the ONE
+# author slug whose machine runs /organize, derive, and the pulse. Each
+# machine's own identity comes from ~/.config/jotd/author (see `jotd whoami`).
+# [team]
+# librarian = "your-author-slug"

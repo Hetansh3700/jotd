@@ -44,6 +44,21 @@ def _flip_checkbox(data_dir: Path, loop: dict[str, Any]) -> None:
     raise JotdError(f"could not find the open checkbox for {loop['id']} in {loop['note']}")
 
 
+def flip_only(data_dir: Path, fragment: str) -> str:
+    """Non-librarian `done` (D12): flip the note checkbox and stop.
+
+    No pulse-log event and no derive — those writers live on the librarian's
+    machine. The flipped checkbox syncs as an ordinary note change and the
+    librarian's derive folds it into status=done.
+    """
+    loop = resolve_loop(data_dir, fragment)
+    _flip_checkbox(data_dir, loop)
+    return (
+        f"done (checkbox flipped): {loop['text']} — "
+        "state updates after the next `jotd sync` + librarian derive"
+    )
+
+
 def respond(
     data_dir: Path,
     fragment: str,

@@ -11,12 +11,16 @@ from typing import Annotated
 import typer
 
 from jotd import inbox
-from jotd.config import resolve_data_dir
+from jotd.author import resolve_author, resolve_author_with_rule
+from jotd.config import load_team, resolve_data_dir
 from jotd.init import scaffold
 
 app = typer.Typer(no_args_is_help=True, add_completion=False, rich_markup_mode=None)
 
 DirOpt = Annotated[Path | None, typer.Option("--dir", help="jotd data dir override")]
+AuthorOpt = Annotated[
+    str | None, typer.Option("--author", help="author slug override (default: this machine's)")
+]
 
 
 def _dir(explicit: Path | None) -> Path:
@@ -25,6 +29,26 @@ def _dir(explicit: Path | None) -> Path:
         typer.echo(f"error: {d} is not a jotd directory (run `jotd init {d}` first)", err=True)
         raise typer.Exit(2)
     return d
+
+
+def _librarian_gate(d: Path, author_flag: str | None = None) -> None:
+    """State-writing commands run only on the librarian's machine (D12).
+
+    Solo mode (no [team] table) is unrestricted. This is a guard against
+    accidental multi-machine state writes, not authentication.
+    """
+    team = load_team(d)
+    if team.librarian is None:
+        return
+    me = resolve_author(author_flag)
+    if me != team.librarian:
+        typer.echo(
+            f"error: this machine is '{me}' but the librarian is '{team.librarian}' "
+            "(jotd.toml [team]) — state-writing commands run only on the librarian's "
+            "machine; capture and `jotd sync` from here instead",
+            err=True,
+        )
+        raise typer.Exit(2)
 
 
 @app.command()
@@ -47,12 +71,19 @@ def _append(
     source: str,
     context: dict[str, str] | None,
     directory: Path | None,
+    author_flag: str | None = None,
 ) -> None:
     joined = " ".join(text) if text else ""
     if not joined or joined == "-":
         joined = sys.stdin.read()
     try:
-        record = inbox.append_capture(_dir(directory), joined, source=source, context=context)
+        record = inbox.append_capture(
+            _dir(directory),
+            joined,
+            source=source,
+            author=resolve_author(author_flag),
+            context=context,
+        )
     except (inbox.JotdError, ValueError) as e:
         typer.echo(f"error: {e}", err=True)
         raise typer.Exit(1) from None
@@ -63,10 +94,11 @@ def _append(
 def add(
     text: Annotated[list[str] | None, typer.Argument()] = None,
     source: Annotated[str, typer.Option()] = "cli",
+    author: AuthorOpt = None,
     directory: DirOpt = None,
 ) -> None:
     """Append a capture to the inbox (append-only; reads stdin when no TEXT or TEXT is '-')."""
-    _append(text, source, None, directory)
+    _append(text, source, None, directory, author)
 
 
 @app.command()
@@ -76,6 +108,7 @@ def capture(
     app_name: Annotated[str | None, typer.Option("--app", help="frontmost app name")] = None,
     title: Annotated[str | None, typer.Option(help="window title, if known")] = None,
     method: Annotated[str | None, typer.Option(help="region|window|fullscreen|ax")] = None,
+    author: AuthorOpt = None,
     directory: DirOpt = None,
 ) -> None:
     """Append a capture with source metadata (for capture clients like screen OCR).
@@ -85,7 +118,34 @@ def capture(
     pipe text via stdin (TEXT of '-') to avoid argv quoting hazards.
     """
     context = {k: v for k, v in (("app", app_name), ("title", title), ("method", method)) if v}
-    _append(text, source, context or None, directory)
+    _append(text, source, context or None, directory, author)
+
+
+@app.command()
+def whoami() -> None:
+    """Print this machine's author slug and which rule resolved it."""
+    slug, rule = resolve_author_with_rule(None)
+    typer.echo(f"{slug}  (from {rule})")
+
+
+@app.command()
+def sync(
+    no_derive: Annotated[
+        bool, typer.Option("--no-derive", help="skip the librarian's auto-derive")
+    ] = False,
+    author: AuthorOpt = None,
+    directory: DirOpt = None,
+) -> None:
+    """Sync the data dir with its git remote: commit, pull --rebase, push."""
+    from jotd.sync import run_sync
+
+    try:
+        lines = run_sync(_dir(directory), resolve_author(author), derive_after_pull=not no_derive)
+    except inbox.JotdError as e:
+        typer.echo(f"error: {e}", err=True)
+        raise typer.Exit(2) from None
+    for line in lines:
+        typer.echo(line)
 
 
 @app.command()
@@ -111,8 +171,10 @@ def mark_processed(
     directory: DirOpt = None,
 ) -> None:
     """Record where a capture was routed (the ONLY way state/processed.log is written)."""
+    d = _dir(directory)
+    _librarian_gate(d)
     try:
-        inbox.mark_processed(_dir(directory), capture_id, paths.split(","))
+        inbox.mark_processed(d, capture_id, paths.split(","))
     except inbox.JotdError as e:
         typer.echo(f"error: {e}", err=True)
         raise typer.Exit(1) from None
@@ -124,7 +186,9 @@ def derive(directory: DirOpt = None) -> None:
     """Rebuild derived state: open-loops.md/.json and entities.json (idempotent)."""
     from jotd.derive import derive as run_derive
 
-    summary = run_derive(_dir(directory))
+    d = _dir(directory)
+    _librarian_gate(d)
+    summary = run_derive(d)
     typer.echo(
         f"stamped {summary['stamped']} hand-written loops; "
         f"{summary['loops_open']} open ({summary['loops_stale']} stale); "
@@ -144,7 +208,9 @@ def pulse(
     """Run the pulse: derive state, let the model judge, deliver within the budget."""
     from jotd.pulse import run_pulse
 
-    result = run_pulse(_dir(directory), "manual" if now else slot, dry_run=dry_run)
+    d = _dir(directory)
+    _librarian_gate(d)
+    result = run_pulse(d, "manual" if now else slot, dry_run=dry_run)
     if result["status"] == "error":
         typer.echo(f"pulse error (logged, nothing sent): {result['error']}", err=True)
         raise typer.Exit(1)
@@ -173,6 +239,19 @@ def _respond(action: str, fragment: str, days: int | None, directory: Path | Non
 @app.command()
 def done(loop: str, directory: DirOpt = None) -> None:
     """Mark a nudged loop done (flips its checkbox in the note too)."""
+    d = _dir(directory)
+    team = load_team(d)
+    if team.librarian is not None and resolve_author(None) != team.librarian:
+        # Non-librarian `done` degrades to a checkbox flip (D12): notes are the
+        # shared human layer, and the librarian's derive folds [x] into status.
+        from jotd.feedback import flip_only
+
+        try:
+            typer.echo(flip_only(d, loop))
+        except inbox.JotdError as e:
+            typer.echo(f"error: {e}", err=True)
+            raise typer.Exit(1) from None
+        return
     _respond("done", loop, None, directory)
 
 
@@ -183,12 +262,14 @@ def snooze(
     directory: DirOpt = None,
 ) -> None:
     """Snooze a loop (default jotd.toml snooze_days); the pulse stays quiet until then."""
+    _librarian_gate(_dir(directory))
     _respond("snooze", loop, days, directory)
 
 
 @app.command()
 def drop(loop: str, directory: DirOpt = None) -> None:
     """Drop a nudge; two drops on one loop silence it permanently."""
+    _librarian_gate(_dir(directory))
     _respond("drop", loop, None, directory)
 
 
@@ -201,7 +282,9 @@ def schedule_install(directory: DirOpt = None) -> None:
     """Write per-slot launchd plists and bootstrap them into the gui domain."""
     from jotd import sched
 
-    for line in sched.install(_dir(directory)):
+    d = _dir(directory)
+    _librarian_gate(d)  # a scheduled pulse on a non-librarian machine would fail 3x daily
+    for line in sched.install(d):
         typer.echo(line)
 
 
@@ -226,11 +309,15 @@ def schedule_status() -> None:
 def install_cmd(
     target: Annotated[str, typer.Argument(help="integration to install (claude-code)")],
     hook: Annotated[
-        bool, typer.Option("--hook", help="also auto-capture sessions via a SessionEnd hook")
+        bool,
+        typer.Option(
+            "--hook",
+            help="auto-capture sessions (SessionEnd) and inject the brief (SessionStart)",
+        ),
     ] = False,
     upgrade: Annotated[bool, typer.Option(help="re-sync unmodified managed files")] = False,
 ) -> None:
-    """Install the global /jotd:session command (and optional session-end hook)."""
+    """Install the global /jotd:session command (and optional session hooks)."""
     if target != "claude-code":
         typer.echo(f"error: unknown install target {target!r} (try: claude-code)", err=True)
         raise typer.Exit(2)
@@ -244,7 +331,7 @@ def install_cmd(
 def uninstall_cmd(
     target: Annotated[str, typer.Argument(help="integration to remove (claude-code)")],
 ) -> None:
-    """Remove the global command files and the SessionEnd hook."""
+    """Remove the global command files and both session hooks."""
     if target != "claude-code":
         typer.echo(f"error: unknown install target {target!r} (try: claude-code)", err=True)
         raise typer.Exit(2)
@@ -271,6 +358,21 @@ def hook_session_end() -> None:
         pass
 
 
+@hook_app.command("session-start")
+def hook_session_start() -> None:
+    """SessionStart hook: print the brief for context injection. Silent on any failure."""
+    try:
+        from jotd.brief import run_session_start
+
+        payload = json.loads(sys.stdin.read())
+        if isinstance(payload, dict):
+            brief = run_session_start(payload)
+            if brief:
+                sys.stdout.write(brief)
+    except Exception:  # noqa: BLE001 — a hook must never break the user's session start
+        pass
+
+
 @app.command()
 def status(directory: DirOpt = None) -> None:
     """Health check: inbox backlog, open loops, last pulse heartbeat, schedule."""
@@ -293,9 +395,7 @@ def status(directory: DirOpt = None) -> None:
         last_ok = next((b for b in reversed(beats) if b["status"] == "ok"), None)
         stale_after = datetime.now().astimezone() - timedelta(hours=36)
         if not last_ok or datetime.fromisoformat(last_ok["ts"]) < stale_after:
-            typer.echo(
-                "WARNING: no successful pulse heartbeat in 36h — check jotd schedule status"
-            )
+            typer.echo("WARNING: no successful pulse heartbeat in 36h — check jotd schedule status")
     else:
         typer.echo("last pulse: never")
     for line in sched.status():

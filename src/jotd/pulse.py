@@ -150,6 +150,8 @@ def _invoke_claude(data_dir: Path, cfg: PulseConfig, prompt: str, agent_body: st
         allowed_tools=("Read", "Grep", "Glob"),
         max_turns=15,
         timeout_s=CLAUDE_TIMEOUT_S,
+        # second recursion breaker for the session hooks (cwd-skip is the first)
+        extra_env={headless.HOOK_ENV_GUARD: "1"},
     )
 
 

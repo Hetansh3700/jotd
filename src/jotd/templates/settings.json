@@ -10,6 +10,8 @@
     ],
     "allow": [
       "Bash(jotd add:*)",
+      "Bash(jotd whoami:*)",
+      "Bash(jotd sync:*)",
       "Bash(jotd unprocessed:*)",
       "Bash(jotd mark-processed:*)",
       "Bash(jotd derive:*)",

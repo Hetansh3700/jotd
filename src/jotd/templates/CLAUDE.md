@@ -15,6 +15,21 @@ These conventions are load-bearing; agents and deterministic tooling both depend
 3. **Notes are append/insert only.** Enrich, link, and add — never delete or rewrite a
    human's existing words. Fixing an obvious typo in something an agent wrote earlier is fine.
 
+## Team mode (when jotd.toml has a [team] table)
+
+This directory may be shared between several people's machines via `jotd sync` (plain git).
+The rules that make that safe:
+
+- Captures carry an `author` and land in per-author inbox files
+  (`inbox/YYYY-MM.<author>.jsonl`) — the inbox is multi-writer across machines but still
+  append-only on each.
+- Everything else is single-writer: only the librarian's machine (the `librarian` author in
+  `[team]`) runs `/organize`, `jotd derive`, the pulse, and nudge feedback. jotd's CLI
+  enforces this — if a command refuses because this machine is not the librarian, stop and
+  tell the user; never work around it or write state files directly.
+- `jotd sync` is the only transport. Never resolve a sync conflict by rewriting inbox or
+  state files; fix notes conflicts by hand, keeping both sides' words.
+
 ## Note format
 
 Notes live in `notes/{people,projects,topics,meetings,journal}/<slug>.md` with YAML

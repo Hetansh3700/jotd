@@ -5,8 +5,10 @@ available in every Claude Code session, with the same sha256-manifest upgrade
 safety as `jotd init`. The manifest lives in jotd's own config dir
 (~/.config/jotd/global-manifest.json) — bookkeeping stays out of ~/.claude.
 
-`--hook` additionally merges a SessionEnd hook entry into ~/.claude/settings.json
-(idempotent; a settings file we cannot parse is never touched).
+`--hook` merges BOTH session hooks into ~/.claude/settings.json (idempotent
+per event; a settings file we cannot parse is never touched): SessionEnd
+auto-captures the ended session (D11) and SessionStart injects the team
+brief (D12) — the write and read halves of the loop.
 """
 
 from __future__ import annotations
@@ -23,13 +25,21 @@ CLAUDE_USER_DIR = Path.home() / ".claude"
 SETTINGS_PATH = CLAUDE_USER_DIR / "settings.json"
 GLOBAL_MANIFEST = Path.home() / ".config" / "jotd" / "global-manifest.json"
 
-# Dedupe/removal match on this substring, so an entry survives binary moves
+# Dedupe/removal match on these substrings, so an entry survives binary moves
 # (absolute path prefix may change; the subcommand never does).
 HOOK_MARKER = "jotd hook session-end"
+START_HOOK_MARKER = "jotd hook session-start"
 
 # The scribe's headless claude run can take ~60s; Claude Code's default hook
-# timeout would kill it mid-run.
+# timeout would kill it mid-run. The start hook is deterministic and instant.
 HOOK_TIMEOUT_S = 120
+START_HOOK_TIMEOUT_S = 10
+
+# (settings event, marker substring, timeout)
+HOOK_SPECS = (
+    ("SessionEnd", HOOK_MARKER, HOOK_TIMEOUT_S),
+    ("SessionStart", START_HOOK_MARKER, START_HOOK_TIMEOUT_S),
+)
 
 
 def global_files() -> dict[str, Path]:
@@ -41,15 +51,15 @@ def global_files() -> dict[str, Path]:
     return out
 
 
-def _hook_entries(settings: dict) -> list[dict]:
-    entries = settings.get("hooks", {}).get("SessionEnd", [])
+def _hook_entries(settings: dict, event: str) -> list[dict]:
+    entries = settings.get("hooks", {}).get(event, [])
     return entries if isinstance(entries, list) else []
 
 
-def _has_jotd_hook(settings: dict) -> bool:
-    for entry in _hook_entries(settings):
+def _has_jotd_hook(settings: dict, event: str, marker: str) -> bool:
+    for entry in _hook_entries(settings, event):
         for h in entry.get("hooks", []) if isinstance(entry, dict) else []:
-            if isinstance(h, dict) and HOOK_MARKER in str(h.get("command", "")):
+            if isinstance(h, dict) and marker in str(h.get("command", "")):
                 return True
     return False
 
@@ -70,45 +80,43 @@ def _write_settings(settings_path: Path, settings: dict) -> None:
     settings_path.write_text(json.dumps(settings, indent=2) + "\n", encoding="utf-8")
 
 
-def merge_session_end_hook(settings_path: Path, command: str) -> str:
+def merge_hook(settings_path: Path, event: str, marker: str, command: str, timeout: int) -> str:
     settings = _load_settings(settings_path)
     if settings is None:
         return f"error: cannot parse {settings_path} — fix it by hand, file left untouched"
-    if _has_jotd_hook(settings):
-        return "SessionEnd hook already installed"
-    settings.setdefault("hooks", {}).setdefault("SessionEnd", []).append(
-        {"hooks": [{"type": "command", "command": command, "timeout": HOOK_TIMEOUT_S}]}
+    if _has_jotd_hook(settings, event, marker):
+        return f"{event} hook already installed"
+    settings.setdefault("hooks", {}).setdefault(event, []).append(
+        {"hooks": [{"type": "command", "command": command, "timeout": timeout}]}
     )
     _write_settings(settings_path, settings)
-    return f"installed SessionEnd hook ({command})"
+    return f"installed {event} hook ({command})"
 
 
-def remove_session_end_hook(settings_path: Path) -> str:
+def remove_hook(settings_path: Path, event: str, marker: str) -> str:
     settings = _load_settings(settings_path)
     if settings is None:
         return f"error: cannot parse {settings_path} — hook entry (if any) left in place"
-    if not _has_jotd_hook(settings):
-        return "no SessionEnd hook installed"
+    if not _has_jotd_hook(settings, event, marker):
+        return f"no {event} hook installed"
     kept = []
-    for entry in _hook_entries(settings):
+    for entry in _hook_entries(settings, event):
         hooks = entry.get("hooks", []) if isinstance(entry, dict) else []
         remaining = [
-            h
-            for h in hooks
-            if not (isinstance(h, dict) and HOOK_MARKER in str(h.get("command", "")))
+            h for h in hooks if not (isinstance(h, dict) and marker in str(h.get("command", "")))
         ]
         if remaining == hooks:
             kept.append(entry)
         elif remaining:
             kept.append({**entry, "hooks": remaining})
     if kept:
-        settings["hooks"]["SessionEnd"] = kept
+        settings["hooks"][event] = kept
     else:
-        del settings["hooks"]["SessionEnd"]
+        del settings["hooks"][event]
         if not settings["hooks"]:
             del settings["hooks"]
     _write_settings(settings_path, settings)
-    return "removed SessionEnd hook"
+    return f"removed {event} hook"
 
 
 def install_claude_code(*, hook: bool = False, upgrade: bool = False) -> list[str]:
@@ -119,7 +127,12 @@ def install_claude_code(*, hook: bool = False, upgrade: bool = False) -> list[st
     if not actions:
         actions.append("commands up to date (use --upgrade to refresh)")
     if hook:
-        actions.append(merge_session_end_hook(SETTINGS_PATH, f"{_jotd_bin()} hook session-end"))
+        jotd_bin = _jotd_bin()
+        for event, marker, timeout in HOOK_SPECS:
+            subcmd = marker.removeprefix("jotd ")
+            actions.append(
+                merge_hook(SETTINGS_PATH, event, marker, f"{jotd_bin} {subcmd}", timeout)
+            )
     return actions
 
 
@@ -155,5 +168,6 @@ def uninstall_claude_code() -> list[str]:
         else:
             GLOBAL_MANIFEST.unlink()
 
-    actions.append(remove_session_end_hook(SETTINGS_PATH))
+    for event, marker, _timeout in HOOK_SPECS:
+        actions.append(remove_hook(SETTINGS_PATH, event, marker))
     return actions or ["nothing installed"]

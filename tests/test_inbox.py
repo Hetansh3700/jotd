@@ -75,6 +75,56 @@ def test_concurrent_processes_append(tmp_path):
     assert all(r["context"] == {"method": "region"} for r in records)
 
 
+def test_authored_capture_gets_per_author_file_and_field(tmp_path):
+    now = datetime(2026, 7, 8, 14, 32, 5).astimezone()
+    record = inbox.append_capture(tmp_path, "team thought", author="ana", now=now)
+    assert record["author"] == "ana"
+    path = tmp_path / "inbox" / "2026-07.ana.jsonl"
+    assert parse_capture_line(path.read_text().splitlines()[0]) == record
+    assert not (tmp_path / "inbox" / "2026-07.jsonl").exists()
+
+
+def test_mixed_legacy_and_authored_files_read_together(tmp_path):
+    now = datetime(2026, 7, 8, 14, 32, 5).astimezone()
+    legacy = inbox.append_capture(tmp_path, "old style", now=now)
+    a = inbox.append_capture(tmp_path, "from ana", author="ana", now=now)
+    b = inbox.append_capture(tmp_path, "from ben", author="ben", now=now)
+    assert len(list((tmp_path / "inbox").glob("*.jsonl"))) == 3
+    ids = {r["id"] for r in inbox.iter_captures(tmp_path)}
+    assert ids == {legacy["id"], a["id"], b["id"]}
+
+    note = tmp_path / "notes" / "topics" / "unsorted.md"
+    note.parent.mkdir(parents=True)
+    note.write_text("stub")
+    inbox.mark_processed(tmp_path, a["id"], ["notes/topics/unsorted.md"])
+    assert {r["id"] for r in inbox.unprocessed(tmp_path)} == {legacy["id"], b["id"]}
+
+
+def test_invalid_author_rejected_nothing_written(tmp_path):
+    with pytest.raises(ValueError, match="slug"):
+        inbox.append_capture(tmp_path, "hello", author="Bob Smith")
+    assert not list((tmp_path / "inbox").glob("*.jsonl"))
+
+
+def test_concurrent_authored_appends_share_one_file(tmp_path):
+    n_threads, per_thread = 4, 25
+
+    def worker(t):
+        for i in range(per_thread):
+            inbox.append_capture(tmp_path, f"t{t} c{i}", author="ana")
+
+    threads = [threading.Thread(target=worker, args=(t,)) for t in range(n_threads)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    files = list((tmp_path / "inbox").glob("*.jsonl"))
+    assert len(files) == 1 and ".ana." in files[0].name
+    records = inbox.iter_captures(tmp_path)  # raises if any line is torn
+    assert len({r["id"] for r in records}) == n_threads * per_thread
+
+
 def test_unprocessed_is_set_difference(tmp_path):
     a = inbox.append_capture(tmp_path, "first")
     b = inbox.append_capture(tmp_path, "second")

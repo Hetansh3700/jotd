@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any
 
 from jotd import headless, inbox
+from jotd.author import resolve_author
 from jotd.config import load_config, resolve_data_dir
 
 MAX_FRAGMENTS = 6
@@ -26,7 +27,7 @@ MAX_FRAGMENT_CHARS = 1500  # atomicity cap; the hard 4096-byte line cap is dump_
 MIN_USER_MESSAGES = 2  # fewer = a one-shot/trivial session, not worth a scribe run
 DIGEST_CHAR_BUDGET = 24_000
 PER_MESSAGE_CHARS = 1500
-HOOK_ENV_GUARD = "JOTD_SESSION_HOOK"
+HOOK_ENV_GUARD = headless.HOOK_ENV_GUARD  # shared with the pulse and the start hook
 SCRIBE_TIMEOUT_S = 90  # must stay under the settings.json hook timeout (120s)
 
 SCRIBE_PROMPT = (
@@ -92,9 +93,7 @@ def manual_capture_ran(transcript_path: Path) -> bool:
     return False
 
 
-def extract_digest(
-    transcript_path: Path, budget: int = DIGEST_CHAR_BUDGET
-) -> tuple[str, int]:
+def extract_digest(transcript_path: Path, budget: int = DIGEST_CHAR_BUDGET) -> tuple[str, int]:
     """Compact the transcript JSONL to (digest, user_message_count)."""
     rendered: list[str] = []
     user_count = 0
@@ -202,6 +201,7 @@ def run_session_end(payload: dict[str, Any]) -> dict[str, Any]:
 
     appended: list[str] = []
     rejected = 0
+    author_slug = resolve_author(None)
     context = {"app": "Claude Code", "title": project, "method": "session-end"}
     for text in fragments:
         if len(text) > MAX_FRAGMENT_CHARS:
@@ -210,7 +210,7 @@ def run_session_end(payload: dict[str, Any]) -> dict[str, Any]:
             continue
         try:
             record = inbox.append_capture(
-                data_dir, text, source="claude-code", context=context
+                data_dir, text, source="claude-code", author=author_slug, context=context
             )
             appended.append(record["id"])
         except (inbox.JotdError, ValueError) as e:

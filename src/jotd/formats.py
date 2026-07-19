@@ -21,6 +21,11 @@ MAX_CAPTURE_BYTES = 4096
 # suffix alone must keep birthday collisions negligible (4 hex ≈ 30% at 200/s).
 CAPTURE_ID_RE = re.compile(r"^cap-\d{8}-\d{6}-[0-9a-f]{8}$")
 
+# Author slugs: per-machine identity (D12). Embedded in inbox filenames
+# (inbox/YYYY-MM.<author>.jsonl), so the alphabet stays filename- and
+# git-portable. Resolution lives in jotd.author; this is the contract.
+AUTHOR_SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,31}$")
+
 # Loop lines inside notes:  - [ ] text <!-- loop:ID -->   (or "- [x]" once done).
 # ID is either the capture id that spawned the loop (stamped by the librarian) or
 # an l-<6hex> id stamped by `jotd derive` for hand-written loops.
@@ -44,6 +49,7 @@ def new_capture(
     now: datetime,
     rand_hex: str,
     source: str = "cli",
+    author: str | None = None,
     context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     record: dict[str, Any] = {
@@ -52,6 +58,10 @@ def new_capture(
         "text": text,
         "source": source,
     }
+    if author:
+        if not AUTHOR_SLUG_RE.match(author):
+            raise ValueError(f"author must be a lowercase [a-z0-9-] slug: {author!r}")
+        record["author"] = author
     if context:
         record["context"] = context
     return record

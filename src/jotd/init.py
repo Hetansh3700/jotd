@@ -120,9 +120,7 @@ def scaffold(
     for sub in NOTE_DIRS:
         (data_dir / "notes" / sub).mkdir(parents=True, exist_ok=True)
 
-    actions += sync_managed_files(
-        _template_files(), data_dir, data_dir / MANIFEST, upgrade=upgrade
-    )
+    actions += sync_managed_files(_template_files(), data_dir, data_dir / MANIFEST, upgrade=upgrade)
 
     unsorted = data_dir / "notes" / "topics" / "unsorted.md"
     if not unsorted.exists():

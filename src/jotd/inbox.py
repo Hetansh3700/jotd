@@ -42,6 +42,7 @@ def append_capture(
     text: str,
     *,
     source: str = "cli",
+    author: str | None = None,
     context: dict[str, Any] | None = None,
     now: datetime | None = None,
 ) -> dict[str, Any]:
@@ -49,9 +50,15 @@ def append_capture(
     if not text:
         raise JotdError("empty capture")
     now = now or datetime.now().astimezone()
-    record = new_capture(text, now=now, rand_hex=uuid.uuid4().hex, source=source, context=context)
+    record = new_capture(
+        text, now=now, rand_hex=uuid.uuid4().hex, source=source, author=author, context=context
+    )
     line = dump_capture_line(record)  # raises on oversize BEFORE anything is written
-    _append_line(data_dir / "inbox" / f"{now.strftime('%Y-%m')}.jsonl", line)
+    # Per-author files (D12) keep concurrent machines out of each other's way under
+    # git sync; author=None keeps the legacy single monthly file (library callers, evals).
+    stem = now.strftime("%Y-%m")
+    name = f"{stem}.{record['author']}.jsonl" if "author" in record else f"{stem}.jsonl"
+    _append_line(data_dir / "inbox" / name, line)
     return record
 
 

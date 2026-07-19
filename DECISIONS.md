@@ -175,3 +175,51 @@ Decisions that matter:
    scribe needs ~60s and CC's default would kill it), and preserves every unknown key.
    Unparseable settings abort the merge untouched. Uninstall removes only entries matching
    the marker and only files whose hash still matches the manifest.
+
+## D12 — Team layer: authorship, git sync, single librarian, SessionStart brief (2026-07-19)
+
+The team layer makes one data dir shared memory for n≈2 people and their agents: captures
+carry authors, machines sync over plain git, one machine organizes, and a SessionStart hook
+injects a deterministic brief into every new CC session (the read-side twin of D11's
+SessionEnd scribe). Permissions, privacy filtering, contested truth, CRDTs/servers are
+deliberately deferred — conventions instead of code at this scale.
+
+Decisions that matter:
+
+1. **Author identity is per-machine and never lives in jotd.toml.** jotd.toml is committed
+   and synced, so "who am I" cannot live there. Resolution: `--author` flag > `$JOTD_AUTHOR`
+   > `~/.config/jotd/author` (the canonical setup) > slugified `git config user.name` > OS
+   username > `"user"`; any layer that slugs to empty falls through. Resolution happens ONLY
+   in the CLI/hook layer and is passed down explicitly — `author=None` keeps the legacy
+   single-file inbox, so library callers and the eval harness are untouched. `jotd whoami`
+   prints the slug AND the rule that resolved it, because slug collisions (two machines,
+   one identity) reintroduce exactly the file conflicts per-author files eliminate; `jotd
+   sync` additionally warns when a pull changes your own author's inbox file.
+2. **Record carries `author` (provenance); filename carries it too (conflict isolation).**
+   `inbox/YYYY-MM.<author>.jsonl` keeps concurrent machines out of each other's way under
+   git; readers group/sort by record fields, never filename (filename order is
+   author-lexicographic, not chronological). Slug contract in formats.py: `[a-z0-9-]`, ≤32.
+3. **Single-librarian is a guard, not auth.** With `[team] librarian` set, mark-processed,
+   derive, pulse, snooze, drop, and `schedule install` exit 2 on non-librarian machines
+   (schedule especially — an installed launchd pulse would otherwise fail 3× daily forever).
+   `done` instead degrades to a checkbox flip: notes are the shared human layer, and derive
+   already folds `[x]` into status=done, so loop state still crosses machines with zero new
+   writers of pulse-log.md (D6 intact). Solo mode (no `[team]`) is byte-for-byte unchanged.
+4. **`jotd sync` is conservative git, nothing more.** commit → pull --rebase → librarian-only
+   derive+commit → push (`-u` on first, exactly one retry on a push race). Empty remote is
+   fine; a rebase conflict aborts and tells the user their commits are safe locally — never
+   auto-merge notes. Identity fallback (`-c user.email=<author>@jotd.invalid`) so a machine
+   without git identity can still commit. On the librarian machine sync auto-derives after
+   pull (--no-derive to skip) so pushed state is as fresh as the last sync.
+5. **The brief is deterministic Python, and the start hook prints or shuts up.** Composed
+   from open-loops.json (stale-first), last-3-days captures grouped by record author,
+   processed.log activity, and a fresh daily brief pointer; hard 4000-char budget enforced
+   by dropping whole lines (D5). `jotd hook session-start` prints on `startup` and `clear`,
+   skips `resume`/`compact` (context already has a brief), and on ANY error or skip prints
+   nothing and exits 0 — same posture as D11, except the success path must write stdout
+   (that is how SessionStart context injection works). Same two recursion breakers as D11;
+   the pulse's headless child now also carries JOTD_SESSION_HOOK=1 (it previously relied on
+   the cwd skip alone), with the guard constant moved to headless.py.
+6. **`--hook` installs both halves of the loop.** SessionEnd (timeout 120) and SessionStart
+   (timeout 10) as separate marker-matched entries; rerunning on an old SessionEnd-only
+   install adds the start hook idempotently; uninstall removes both and nothing else.

@@ -16,6 +16,11 @@ from typing import Any
 
 DEFAULT_DISALLOWED_TOOLS = ("Bash", "Edit", "Write", "WebSearch", "WebFetch")
 
+# Set on every jotd-spawned headless claude so the session hooks (SessionEnd
+# scribe, SessionStart brief) can recognize their own children and bail —
+# breaker #1 against a fork bomb; breaker #2 is the cwd-is-data-dir skip.
+HOOK_ENV_GUARD = "JOTD_SESSION_HOOK"
+
 
 def invoke_claude(
     prompt: str,
@@ -43,9 +48,7 @@ def invoke_claude(
     env = None
     if extra_env:
         env = {**os.environ, **extra_env}
-    proc = subprocess.run(
-        cmd, cwd=cwd, capture_output=True, text=True, timeout=timeout_s, env=env
-    )
+    proc = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=timeout_s, env=env)
     if proc.returncode != 0:
         raise RuntimeError(f"claude exited {proc.returncode}: {proc.stderr[-400:]}")
     envelope = json.loads(proc.stdout)

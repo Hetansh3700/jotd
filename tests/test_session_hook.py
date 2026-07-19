@@ -246,6 +246,17 @@ def test_extract_digest_budget_keeps_task_and_tail(tmp_path):
     assert len(digest) < 3200
 
 
+def test_scribe_captures_carry_author(tmp_path, monkeypatch):
+    d = make_jotd_dir(tmp_path, monkeypatch)
+    monkeypatch.setenv("JOTD_AUTHOR", "zed")
+    t = make_transcript(tmp_path, DEFAULT_ENTRIES)
+    monkeypatch.setattr(sc, "_invoke_scribe", scribe_reply("a durable fact"))
+    assert sc.run_session_end(payload(t))["status"] == "ok"
+    (record,) = inbox.unprocessed(d)
+    assert record["author"] == "zed"
+    assert any(".zed." in p.name for p in (d / "inbox").glob("*.jsonl"))
+
+
 def test_cli_hook_never_fails(tmp_path, monkeypatch):
     monkeypatch.setenv("JOTD_DIR", str(tmp_path / "nowhere"))
     for stdin in ("not json", "", "[1,2,3]", json.dumps({"reason": "other"})):
