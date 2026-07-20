@@ -159,8 +159,20 @@ jotd sync --no-derive            # skip the librarian's auto-derive on this sync
 ```
 
 `jotd sync` never auto-merges your notes: on a rebase conflict it aborts and leaves your
-commits safe locally for you to resolve by hand. See [docs/team.md](docs/team.md) for the
-full two-machine setup.
+commits safe locally for you to resolve by hand.
+
+**Zero-touch mode:** set `[sync] auto = true` in the shared `jotd.toml` and run
+`jotd schedule install` on each machine — every machine then runs `jotd sync --auto` on a
+launchd interval, and the librarian's machine auto-runs a headless `/organize` whenever the
+unprocessed backlog crosses `organize_backlog`, then syncs again. Capture → organize →
+brief with nobody typing a command. Conflicts notify once and wait for a human; a failing
+organize cools down for 4h; every tick is one line in `state/logs/sync-auto.log`.
+
+The injected brief is also **repo-aware**: when the directory you open (its name or git
+remote) matches a project note, that project's loops and captures rank first under a
+`focus:` header — deterministic string matching, no LLM at session start.
+
+See [docs/team.md](docs/team.md) for the full two-machine setup.
 
 ## Concepts
 

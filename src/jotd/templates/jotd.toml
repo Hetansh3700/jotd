@@ -15,6 +15,19 @@ morning = "09:00"
 midday = "13:30"
 evening = "17:30"
 
+# Background propagation: with auto = true, `jotd schedule install` also
+# installs a launchd job running `jotd sync --auto` on an interval. On the
+# librarian's machine an auto-sync additionally runs a headless /organize when
+# the unprocessed backlog reaches organize_backlog, then syncs again. That
+# needs the data dir trusted once in an interactive `claude` session (D7).
+# jotd.toml is committed, so setting auto = true here enables every machine.
+[sync]
+auto = false
+interval_minutes = 15
+organize_backlog = 5
+organize_timeout_s = 2400
+# organize_model = "sonnet"   # default: reuse [pulse].model
+
 # Team mode (shared data dir over `jotd sync`): uncomment and name the ONE
 # author slug whose machine runs /organize, derive, and the pulse. Each
 # machine's own identity comes from ~/.config/jotd/author (see `jotd whoami`).

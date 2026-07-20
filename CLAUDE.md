@@ -34,7 +34,8 @@ Key modules under `src/jotd/`:
 - `derive.py` — deterministically rebuilds `state/` from notes; stamps `- [ ]` checkboxes with stable loop ids. Loop status (done/snoozed/silenced) is always *folded* from pulse-log events at derive time, never stored.
 - `pulse.py` + `budget.py` — the scheduled judgment run. The budget `min(per_run, per_day − sent_today)` is computed in code before the model is invoked; silenced/snoozed loops are pre-filtered out of the packet; the model's nudges are hard-truncated to the budget and hallucinated/duplicate loop ids rejected, with runner rejections logged as suppressions.
 - `pulselog.py` — the ONLY writer of `state/pulse-log.md`; strict one-event-per-line grammar; every event is re-parsed before append and an unparseable event raises instead of corrupting the log (D6).
-- `headless.py` — shared one-shot `claude -p … --output-format json` invoker (used by pulse and the session scribe); disallows Bash/Edit/Write/WebSearch/WebFetch by default.
+- `headless.py` — shared one-shot `claude -p … --output-format json` invoker (used by pulse, the session scribe, and auto-organize); disallows Bash/Edit/Write/WebSearch/WebFetch by default; `permission_mode` exists for the one caller that needs `acceptEdits` (D13).
+- `autosync.py` — the `jotd sync --auto` runner (see Background propagation below).
 - `init.py` / `install.py` — scaffolding with sha256 manifests (`.claude/.jotd-manifest.json`, `~/.config/jotd/global-manifest.json`) so upgrades never clobber hand-edited files; `init.sync_managed_files` is the shared core. `_template_files()` deliberately skips `templates/global/` — without that, `init --upgrade` would scaffold the global session command into every data dir (regression-tested, D11).
 - `session_capture.py` — the SessionEnd scribe (see Session capture below).
 - `author.py` / `sync.py` / `brief.py` — the team layer (see Team layer below).
@@ -42,7 +43,7 @@ Key modules under `src/jotd/`:
 
 **Single-writer discipline:** never add another writer to `inbox/`, `processed.log`, or `pulse-log.md`. In team mode this extends across machines: per-author inbox files are multi-machine-safe, everything else is written only on the librarian's machine (guarded in `cli.py::_librarian_gate`).
 
-macOS-only pieces: `sched.py` (launchd, labels `com.jotd.pulse.*`, bootstraps into `gui/$UID` so headless runs use the login keychain — no API key on disk, D7), `notify.py`, and `contrib/screen-capture/`.
+macOS-only pieces: `sched.py` (launchd, labels `com.jotd.pulse.*` + `com.jotd.sync.auto`, bootstraps into `gui/$UID` so headless runs use the login keychain — no API key on disk, D7), `notify.py`, and `contrib/screen-capture/`.
 
 ### Session capture (D11)
 
@@ -62,12 +63,28 @@ context injection (prints on `startup`/`clear`, silent on `resume`/`compact` and
 error). Both session hooks share the same two recursion breakers; the env guard constant
 lives in `headless.py` and every jotd headless child must set it.
 
+### Background propagation (D13) + repo-aware briefs (D14)
+
+`autosync.py` composes `run_sync` — `sync.py` stays pure transport, no locks/notify/LLM
+there. One tick = flock guard → sync → (librarian only, backlog ≥ `[sync]
+organize_backlog`, no cooldown, no pulse in flight) headless `/organize` via
+`headless.invoke_claude(..., permission_mode="acceptEdits")` → post-model code guards →
+sync again. Every marker/lock lives under git-ignored `state/logs/` — `run_sync` does `git
+add -A`, so anywhere else would get committed. The inbox guard is **append-aware**
+(`new.startswith(old)`), never a blanket `git checkout -- inbox/` — a capture landing
+mid-organize must survive; keep that if touching `_guard_inbox`. Conflicts notify once per
+episode (marker file); failed organizes cool down 4h; `jotd sync --auto` always exits 0.
+The headless organize child must carry BOTH recursion-breaker markers (env guard + cwd =
+data dir). `brief.py`'s cwd focus (D14) is pure string matching against
+`state/entities.json`; the no-match path must stay byte-identical to the unranked brief
+(regression-tested).
+
 ### Evals
 
 `evals/` lives outside `tests/` and is imported into pytest via `tests/conftest.py`. `evals/golden/` is a synthetic, deterministic `/organize` run with **three planted defects**; `tests/test_grader.py` asserts the grader still catches them — including that loop recall 8/9 = 0.889 correctly FAILS the 0.90 gate. Regenerate golden only via `evals/make_golden.py`. Tripwire (D8): add at most 2 loop-true fixtures per extension, or golden loop recall crosses the gate and the grader-honesty test stops biting.
 
 ## Conventions
 
-- `DECISIONS.md` is the running decision log (D0–D12). Every non-obvious choice is recorded there; when you make one, append an entry. Early entries use the pre-rename `vault` names — they are records, not docs.
+- `DECISIONS.md` is the running decision log (D0–D14). Every non-obvious choice is recorded there; when you make one, append an entry. Early entries use the pre-rename `vault` names — they are records, not docs.
 - User data-dir invariants (mirrored in `templates/CLAUDE.md`): the inbox is append-only; `state/` is derived/CLI-owned; notes are append/insert-only; never remove a `<!-- loop:… -->` stamp.
 - Ruff: line-length 100, target py311, rules E/F/I/UP/B.

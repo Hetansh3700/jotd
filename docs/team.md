@@ -16,7 +16,10 @@ a private git repo is the entire backend.
   next derive.
 - **Read: everywhere.** The SessionStart hook prints a deterministic brief (open loops with
   owners, who captured what recently, notes touched) that Claude Code injects into every new
-  session's context, in any repo, on any machine.
+  session's context, in any repo, on any machine. When the session's directory (its name or
+  its git remote) matches a project note, the brief re-ranks around that project — a
+  `focus:` header, that project's loops and routed captures first (D14; pure string
+  matching, no LLM, unchanged output when nothing matches).
 
 Deliberately deferred at this scale: permissions, privacy filtering, contested truth.
 Conventions, not infrastructure.
@@ -53,7 +56,40 @@ jotd init ~/jotd --set-default       # no-op scaffold + pointer file; existing f
 jotd sync
 ```
 
-## Daily rhythm
+## Zero-touch loop (recommended)
+
+Turn the daily rhythm below into background infrastructure (D13). Once, in the shared
+`jotd.toml` (it syncs, so this enables every machine):
+
+```toml
+[sync]
+auto = true            # jotd schedule install adds the auto-sync job
+interval_minutes = 15
+organize_backlog = 5   # librarian: headless /organize when unprocessed >= 5
+```
+
+Then on **each** machine: `jotd schedule install`. Every machine gets a launchd job running
+`jotd sync --auto` on the interval; the librarian's machine also gets the pulse slots, and
+its auto-syncs run a headless `/organize` whenever the backlog crosses the threshold — then
+sync again. capture → auto-sync → auto-organize → auto-sync, zero touch.
+
+What the automation promises:
+
+- **Conflicts notify once, then wait for you.** The first failing tick sends one macOS
+  notification and later ticks stay quiet; resolve by hand and the next tick logs
+  `recovered`. Never an auto-merge.
+- **A broken organize can't burn tokens.** Any failed attempt sets a 4h cooldown
+  (`state/logs/organize.cooldown`); plain syncing continues every tick throughout.
+- **The inbox stays inviolate.** Inbox files are byte-snapshotted around the organize; any
+  non-append change is restored from git and flagged. A capture landing mid-organize
+  survives.
+- Everything it does is one line per tick in `state/logs/sync-auto.log`; `jotd status`
+  shows the last tick and warns on a standing conflict.
+
+One prerequisite on the librarian machine: the data dir must be trusted for headless runs
+(run `claude` inside it once — the same day-0 step the pulse needs, D7).
+
+## Daily rhythm (manual mode)
 
 - Capture from anywhere: `jotd add "..."`, `/jotd:session`, or let the SessionEnd hook do it.
 - `jotd sync` whenever you want to publish/receive (the brief nags you when captures are

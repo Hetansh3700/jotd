@@ -45,13 +45,51 @@ def test_state_writers_refuse_on_non_librarian_machine(tmp_path, monkeypatch):
         ["pulse", "--dry-run"],
         ["snooze", "whatever"],
         ["drop", "whatever"],
-        ["schedule", "install"],
     ):
         result = runner.invoke(app, [*cmd, "--dir", str(d)])
         assert result.exit_code == 2, (cmd, result.output)
         assert "librarian" in result.output, cmd
     assert not (d / "state" / "open-loops.json").exists()
     assert not (d / "state" / "pulse-log.md").exists()
+
+
+def test_schedule_install_split_gate(tmp_path, monkeypatch):
+    """D13: pulse installs only where it can run; the sync job installs anywhere
+    [sync] auto is on. Nothing installable on a non-librarian machine exits 2."""
+    from jotd import sched
+
+    pulse_calls, sync_calls = [], []
+    monkeypatch.setattr(sched, "install", lambda d: pulse_calls.append(d) or ["pulse scheduled"])
+    monkeypatch.setattr(
+        sched, "install_sync", lambda d, m: sync_calls.append((d, m)) or ["auto-sync scheduled"]
+    )
+
+    d = make_team_dir(tmp_path, monkeypatch, librarian="ana")
+
+    # non-librarian, auto off -> nothing installable, old guard behavior
+    as_author(monkeypatch, "ben")
+    result = runner.invoke(app, ["schedule", "install", "--dir", str(d)])
+    assert result.exit_code == 2
+    assert "librarian" in result.output
+    assert pulse_calls == [] and sync_calls == []
+
+    # non-librarian, auto on -> sync only, exit 0 (the template already has [sync])
+    toml = (d / "jotd.toml").read_text()
+    (d / "jotd.toml").write_text(
+        toml.replace("auto = false", "auto = true").replace(
+            "interval_minutes = 15", "interval_minutes = 20"
+        )
+    )
+    result = runner.invoke(app, ["schedule", "install", "--dir", str(d)])
+    assert result.exit_code == 0, result.output
+    assert "pulse schedule skipped" in result.output
+    assert pulse_calls == [] and sync_calls == [(d, 20)]
+
+    # librarian -> both
+    as_author(monkeypatch, "ana")
+    result = runner.invoke(app, ["schedule", "install", "--dir", str(d)])
+    assert result.exit_code == 0, result.output
+    assert pulse_calls == [d] and sync_calls == [(d, 20), (d, 20)]
 
 
 def test_librarian_machine_passes_the_gate(tmp_path, monkeypatch):

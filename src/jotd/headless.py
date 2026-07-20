@@ -30,6 +30,7 @@ def invoke_claude(
     system_prompt: str | None = None,
     allowed_tools: tuple[str, ...] = (),
     disallowed_tools: tuple[str, ...] = DEFAULT_DISALLOWED_TOOLS,
+    permission_mode: str | None = None,  # e.g. "acceptEdits" for the headless /organize
     max_turns: int = 1,
     timeout_s: int = 120,
     extra_env: dict[str, str] | None = None,
@@ -44,6 +45,8 @@ def invoke_claude(
         cmd += ["--allowedTools", *allowed_tools]
     if disallowed_tools:
         cmd += ["--disallowedTools", *disallowed_tools]
+    if permission_mode:
+        cmd += ["--permission-mode", permission_mode]
     cmd += ["--output-format", "json", "--max-turns", str(max_turns)]
     env = None
     if extra_env:

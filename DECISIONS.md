@@ -223,3 +223,78 @@ Decisions that matter:
 6. **`--hook` installs both halves of the loop.** SessionEnd (timeout 120) and SessionStart
    (timeout 10) as separate marker-matched entries; rerunning on an old SessionEnd-only
    install adds the start hook idempotently; uninstall removes both and nothing else.
+
+## D13 — Background propagation: auto-sync + backlog-triggered auto-organize (2026-07-20)
+
+D12 made shared memory possible; every hop was still human-triggered (`jotd sync` per
+machine, `/organize` on the librarian's). D13 makes propagation automatic: a
+`com.jotd.sync.auto` launchd job (StartInterval, default 15 min) runs `jotd sync --auto` on
+every machine; on the librarian's machine an auto-sync additionally runs a headless
+`/organize` when the unprocessed backlog reaches `[sync] organize_backlog`, then syncs
+again. capture → auto-sync → auto-organize → auto-sync, zero touch. The D5 split holds:
+the model only routes notes; code owns the schedule, thresholds, locks, guards, recovery.
+
+Decisions that matter:
+
+1. **`sync.py` stays pure transport; the runner is `autosync.py`.** Flock overlap guard,
+   logging, notification, the LLM call, and all recovery live in the new module —
+   composing `run_sync`, never modifying it. `jotd sync --auto` prints nothing and always
+   exits 0 (launchd throttles failing jobs; retry semantics are ours).
+2. **Every new on-disk artifact lives under git-ignored `state/logs/`** — `run_sync` does
+   `git add -A`, so a lock or marker anywhere else would get committed and synced. Files:
+   `sync-auto.log` (structured log AND the plist's Std{Out,Err}Path — the module prints
+   nothing, so launchd's redirect only ever captures tracebacks, one file to debug),
+   `.sync-auto.lock`, `sync-auto.conflict`, `organize.cooldown`.
+3. **Conflicts notify once per episode.** First failing tick sends one notification and
+   writes the conflict marker; later ticks log only ("still failing"); the next clean sync
+   clears the marker and logs `recovered`. `run_sync` already refuses to run mid-rebase, so
+   ticks are inert until the human resolves. Unknown exceptions never notify (no notify
+   loops) — they log, and the launchd redirect has the traceback.
+4. **The headless organize is the eval harness's proven recipe via the shared invoker.**
+   `headless.invoke_claude` gained `permission_mode` (the one missing flag);
+   `/organize` runs with `acceptEdits`, `--allowedTools` for the three jotd Bash commands,
+   `disallowed_tools=()`, max-turns 250, and both recursion-breaker envs. Trust
+   prerequisite (D7) unchanged: the librarian's data dir is trusted interactively once.
+5. **Post-organize guards are append-aware, not blunt.** Inbox files are snapshotted
+   before the run; afterwards `new.startswith(old)` passes (a legit capture landing
+   mid-organize survives), anything else is restored from git (lossless — sync #1 committed
+   moments ago) with a log + notification; new inbox files survive only if every line
+   parses as a capture (month rollover). Rejected: blanket `git checkout -- inbox/`, which
+   would destroy concurrent captures.
+6. **Failure is cheap and bounded.** Organize failure (or a run where the backlog didn't
+   decrease — mark-processed never ran) writes a 4h cooldown marker so a broken organize
+   can't burn a 40-minute timeout every 15 minutes; partial progress still ships (append-only
+   artifacts are valid at any prefix, sync #2 re-derives IN CODE and pushes). A pulse
+   in flight skips organize (flock on `.pulse.lock`), never waits.
+7. **`schedule install` is now per-machine-aware.** Pulse jobs install only where they can
+   run (solo or librarian — D12.3's rationale intact); the sync job installs anywhere
+   `[sync] auto = true`, and is skipped with a message when the dir has no git repo or no
+   origin. Nothing installable on a non-librarian machine still exits 2. `[sync]` lives in
+   the committed jotd.toml, so enabling auto once propagates to every machine by itself.
+
+## D14 — Repo-aware briefs: deterministic cwd focus (2026-07-20)
+
+The SessionStart brief was global — the same 4000 chars whether you opened the repo the
+team is heads-down on or an unrelated scratch dir. D14 ranks it around the project the
+session is in, still with zero LLM at session start (D5): `build_brief` takes the hook's
+`cwd` and re-orders — never adds — content when a deterministic match is found.
+
+Decisions that matter:
+
+1. **Focus tokens come from two places only:** the slugified cwd basename, then the origin
+   remote's repo name (same 5s-timeout, None-on-failure `_git` posture as the header bits).
+   Both reuse `author.slugify` — one slug alphabet everywhere.
+2. **Matching is string comparison over sorted inputs, in a fixed priority.** Candidates
+   come from `state/entities.json` (fallback: `notes/projects/*.md` stems when derive has
+   never run); `type == "project"` entities beat all others; per pool: exact slug > exact
+   slugified alias > containment either direction with the shorter side >= 4 chars (kills
+   `api`-grade noise); containment ties break longest-slug-then-lexicographic.
+3. **"Boost" is a stable re-sort, never new content.** Loops on the focus note float as a
+   block (stale-first preserved within tiers), the focus note leads "notes touched", and
+   captures ROUTED to the focus note (per processed.log) displace the newest-3 default
+   within their author group. Rejected: matching capture TEXT — deterministic but hopelessly
+   noisy (the project name appears in most captures), and unprocessed captures have no
+   routing to match anyway. All caps and the char budget unchanged.
+4. **No match ⇒ byte-identical output.** cwd absent, tokens empty, or nothing matched means
+   every focus-gated branch is skipped and the brief is literally `==` the unranked one —
+   regression-tested, so the ranking can never drift the default.

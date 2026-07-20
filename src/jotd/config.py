@@ -69,6 +69,39 @@ def load_team(data_dir: Path) -> TeamConfig:
     return cfg
 
 
+@dataclass
+class SyncConfig:
+    """The [sync] table (D13). auto controls whether `jotd schedule install`
+    installs the com.jotd.sync.auto launchd job; the organize_* keys only
+    matter on the librarian's machine."""
+
+    auto: bool = False
+    interval_minutes: int = 15
+    organize_backlog: int = 5  # librarian: backlog >= this triggers headless /organize; 0 = never
+    organize_timeout_s: int = 2400
+    organize_model: str | None = None  # None -> reuse [pulse].model
+
+
+def load_sync(data_dir: Path) -> SyncConfig:
+    cfg = SyncConfig()
+    toml_path = data_dir / "jotd.toml"
+    if not toml_path.is_file():
+        return cfg
+    data = tomllib.loads(toml_path.read_text(encoding="utf-8")).get("sync", {})
+    for key in (
+        "auto",
+        "interval_minutes",
+        "organize_backlog",
+        "organize_timeout_s",
+        "organize_model",
+    ):
+        if key in data:
+            setattr(cfg, key, data[key])
+    if not isinstance(cfg.interval_minutes, int) or cfg.interval_minutes < 1:
+        cfg.interval_minutes = 15  # deterministic guard, never a crash
+    return cfg
+
+
 def load_config(data_dir: Path) -> PulseConfig:
     cfg = PulseConfig()
     toml_path = data_dir / "jotd.toml"

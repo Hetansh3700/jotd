@@ -133,10 +133,27 @@ def sync(
     no_derive: Annotated[
         bool, typer.Option("--no-derive", help="skip the librarian's auto-derive")
     ] = False,
+    auto: Annotated[
+        bool,
+        typer.Option(
+            "--auto",
+            help="scheduled mode: log to state/logs/sync-auto.log, notify once "
+            "on failure, always exit 0 (launchd owns the schedule, we own retries)",
+        ),
+    ] = False,
     author: AuthorOpt = None,
     directory: DirOpt = None,
 ) -> None:
     """Sync the data dir with its git remote: commit, pull --rebase, push."""
+    if auto:
+        # --no-derive is ignored here: auto mode IS the librarian-derive path
+        try:
+            from jotd.autosync import run_auto_sync
+
+            run_auto_sync(_dir(directory), resolve_author(author))
+        except Exception:  # noqa: BLE001 — a scheduled job must never exit non-zero
+            pass
+        return
     from jotd.sync import run_sync
 
     try:
@@ -274,23 +291,44 @@ def drop(loop: str, directory: DirOpt = None) -> None:
 
 
 schedule_app = typer.Typer(no_args_is_help=True, add_completion=False)
-app.add_typer(schedule_app, name="schedule", help="launchd scheduling for the pulse (macOS)")
+app.add_typer(
+    schedule_app, name="schedule", help="launchd scheduling for the pulse and auto-sync (macOS)"
+)
 
 
 @schedule_app.command("install")
 def schedule_install(directory: DirOpt = None) -> None:
-    """Write per-slot launchd plists and bootstrap them into the gui domain."""
+    """Install what fits THIS machine: pulse slots (librarian/solo only) and,
+    with [sync] auto = true, the auto-sync job (any machine)."""
     from jotd import sched
+    from jotd.config import load_sync, load_team
 
     d = _dir(directory)
-    _librarian_gate(d)  # a scheduled pulse on a non-librarian machine would fail 3x daily
-    for line in sched.install(d):
+    team = load_team(d)
+    me = resolve_author(None)
+    installed: list[str] = []
+    pulse_allowed = team.librarian is None or me == team.librarian
+    if pulse_allowed:
+        installed += sched.install(d)  # a pulse elsewhere would fail 3x daily (D12)
+    else:
+        typer.echo(
+            f"pulse schedule skipped: this machine is '{me}', the librarian is "
+            f"'{team.librarian}' — the pulse runs only there"
+        )
+    sync_cfg = load_sync(d)
+    if sync_cfg.auto:
+        installed += sched.install_sync(d, sync_cfg.interval_minutes)
+    else:
+        typer.echo("auto-sync schedule skipped: set [sync] auto = true in jotd.toml to enable")
+    for line in installed:
         typer.echo(line)
+    if not installed and not pulse_allowed:
+        raise typer.Exit(2)  # nothing installable here — keep the old guard's teeth
 
 
 @schedule_app.command("uninstall")
 def schedule_uninstall() -> None:
-    """Boot out and remove all jotd pulse plists."""
+    """Boot out and remove all jotd plists (pulse slots and auto-sync)."""
     from jotd import sched
 
     for line in sched.uninstall():
@@ -379,13 +417,22 @@ def status(directory: DirOpt = None) -> None:
     from datetime import datetime, timedelta
 
     from jotd import pulselog, sched
+    from jotd.config import load_sync, load_team
 
     d = _dir(directory)
     backlog = len(inbox.unprocessed(d))
     events = pulselog.read_events(d)
     beats = [e for e in events if e["kind"] == "heartbeat"]
     typer.echo(f"jotd directory: {d}")
-    typer.echo(f"inbox backlog: {backlog} unprocessed")
+    sync_cfg = load_sync(d)
+    backlog_line = f"inbox backlog: {backlog} unprocessed"
+    if (
+        sync_cfg.auto
+        and sync_cfg.organize_backlog > 0
+        and load_team(d).librarian == resolve_author(None)
+    ):
+        backlog_line += f" (auto-organize at >={sync_cfg.organize_backlog})"
+    typer.echo(backlog_line)
     loops_md = d / "state" / "open-loops.md"
     if loops_md.is_file():
         typer.echo(loops_md.read_text().splitlines()[3].strip("_ "))
@@ -398,6 +445,17 @@ def status(directory: DirOpt = None) -> None:
             typer.echo("WARNING: no successful pulse heartbeat in 36h — check jotd schedule status")
     else:
         typer.echo("last pulse: never")
+    auto_log = d / "state" / "logs" / "sync-auto.log"
+    if auto_log.is_file():
+        tail = [ln for ln in auto_log.read_text(encoding="utf-8").splitlines() if ln.strip()]
+        if tail:
+            typer.echo(f"last auto-sync: {tail[-1]}")
+    elif sync_cfg.auto:
+        typer.echo("last auto-sync: never")
+    conflict = d / "state" / "logs" / "sync-auto.conflict"
+    if conflict.is_file():
+        since = conflict.read_text(encoding="utf-8").split(" ", 1)[0]
+        typer.echo(f"WARNING: auto-sync failing since {since} — run `jotd sync` by hand")
     for line in sched.status():
         typer.echo(f"schedule: {line}")
 

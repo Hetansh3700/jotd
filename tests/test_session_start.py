@@ -174,6 +174,126 @@ def test_cli_hook_prints_brief(tmp_path, monkeypatch):
     assert result.output.startswith("# jotd brief")
 
 
+def seed_entities(d: Path, entities: dict):
+    (d / "state").mkdir(exist_ok=True)
+    (d / "state" / "entities.json").write_text(
+        json.dumps({"generated": TODAY, "entities": entities})
+    )
+
+
+ATLAS = {"type": "project", "title": "Atlas", "aliases": [], "path": "notes/projects/atlas.md"}
+
+
+def test_cwd_focus_reorders_loops_and_headers(tmp_path, monkeypatch):
+    d = make_jotd_dir(tmp_path, monkeypatch)
+    seed_entities(d, {"atlas": ATLAS, "jotd": {**ATLAS, "path": "notes/projects/jotd.md"}})
+    atlas_loop = dict(loop("l-atlas1", "wire the atlas ingest"), note="notes/projects/atlas.md")
+    seed_state(
+        d,
+        loops=[
+            loop("l-jotd1", "ship the sync PR", stale=True, age=9),  # normally ranked first
+            atlas_loop,
+        ],
+    )
+    out = vbrief.run_session_start(payload(cwd="/Users/x/dev/atlas"))
+    assert out is not None
+    assert "focus: atlas (notes/projects/atlas.md)" in out
+    assert out.index("wire the atlas ingest") < out.index("ship the sync PR")
+
+
+def test_cwd_git_remote_matches_when_basename_does_not(tmp_path, monkeypatch):
+    import shutil as _shutil
+    import subprocess
+
+    if _shutil.which("git") is None:
+        import pytest
+
+        pytest.skip("git required")
+    d = make_jotd_dir(tmp_path, monkeypatch)
+    seed_entities(d, {"atlas": ATLAS})
+    seed_state(d, loops=[dict(loop("l-a", "atlas thing"), note="notes/projects/atlas.md")])
+    checkout = tmp_path / "work-checkout"  # basename matches nothing
+    checkout.mkdir()
+    subprocess.run(["git", "init", "-q", str(checkout)], check=True)
+    subprocess.run(
+        ["git", "-C", str(checkout), "remote", "add", "origin", "git@github.com:me/atlas.git"],
+        check=True,
+    )
+    out = vbrief.build_brief(d, cwd=str(checkout))
+    assert out is not None and "focus: atlas" in out
+
+
+def test_alias_and_containment_matching(tmp_path, monkeypatch):
+    d = make_jotd_dir(tmp_path, monkeypatch)
+    seed_state(d, loops=[dict(loop("l-a", "a loop"), note="notes/projects/atlas.md")])
+
+    # exact slugified-alias match
+    seed_entities(d, {"deep-research": {**ATLAS, "aliases": ["DR Project"]}})
+    assert "focus: deep-research" in vbrief.build_brief(d, cwd="/dev/dr-project")
+
+    # containment either direction, shorter side >= 4 chars
+    seed_entities(d, {"atlas": ATLAS})
+    assert "focus: atlas" in vbrief.build_brief(d, cwd="/dev/atlas-api")
+
+    # 3-char slugs never containment-match
+    seed_entities(d, {"api": {**ATLAS, "path": "notes/projects/api.md"}})
+    assert "focus:" not in vbrief.build_brief(d, cwd="/dev/api-gateway")
+
+
+def test_no_match_is_byte_identical(tmp_path, monkeypatch):
+    d = make_jotd_dir(tmp_path, monkeypatch)
+    seed_entities(d, {"atlas": ATLAS})
+    seed_state(d)
+    inbox.append_capture(d, "a capture", author="ana")
+    baseline = vbrief.build_brief(d, now=NOW)
+    assert vbrief.build_brief(d, now=NOW, cwd="/tmp/zzz-unrelated") == baseline
+    assert vbrief.build_brief(d, now=NOW, cwd=None) == baseline
+
+
+def test_focus_prefers_routed_captures(tmp_path, monkeypatch):
+    d = make_jotd_dir(tmp_path, monkeypatch)
+    seed_entities(d, {"atlas": ATLAS})
+    seed_state(d, loops=[dict(loop("l-a", "a loop"), note="notes/projects/atlas.md")])
+    routed = inbox.append_capture(d, "the atlas decision", author="ana")
+    for i in range(3):
+        inbox.append_capture(d, f"newer noise {i}", author="ana")
+    ts = NOW.isoformat(timespec="seconds")
+    inbox._append_line(
+        d / "state" / "processed.log",
+        format_processed_line(routed["id"], ["notes/projects/atlas.md"], ts),
+    )
+    plain = vbrief.build_brief(d, now=NOW)
+    assert "the atlas decision" not in plain  # newest-3 default drops the oldest
+    focused = vbrief.build_brief(d, now=NOW, cwd="/dev/atlas")
+    assert "the atlas decision" in focused
+
+
+def test_entities_missing_falls_back_to_project_filenames(tmp_path, monkeypatch):
+    d = make_jotd_dir(tmp_path, monkeypatch)  # no entities.json at all
+    (d / "notes" / "projects").mkdir(parents=True)
+    (d / "notes" / "projects" / "atlas.md").write_text("---\ntitle: Atlas\n---\n")
+    seed_state(d, loops=[dict(loop("l-a", "a loop"), note="notes/projects/atlas.md")])
+    assert "focus: atlas (notes/projects/atlas.md)" in vbrief.build_brief(d, cwd="/dev/atlas")
+
+
+def test_focus_budget_still_enforced(tmp_path, monkeypatch):
+    d = make_jotd_dir(tmp_path, monkeypatch)
+    seed_entities(d, {"atlas": ATLAS})
+    seed_state(
+        d,
+        loops=[
+            dict(
+                loop(f"l-{i:06x}", f"loop {i}: " + "x" * 90, age=i),
+                note="notes/projects/atlas.md",
+            )
+            for i in range(300)
+        ],
+    )
+    out = vbrief.build_brief(d, cwd="/dev/atlas")
+    assert out is not None and len(out) <= vbrief.BRIEF_CHAR_BUDGET + 1
+    assert "focus: atlas" in out
+
+
 def test_pulse_child_carries_env_guard(tmp_path, monkeypatch):
     from jotd import pulse as vpulse
     from jotd.config import PulseConfig

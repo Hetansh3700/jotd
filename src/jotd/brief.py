@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from jotd import headless, inbox
+from jotd.author import slugify
 from jotd.config import resolve_data_dir
 from jotd.formats import parse_capture_line, parse_processed_line
 
@@ -100,6 +101,72 @@ def _recent_notes(data_dir: Path, today: date) -> list[str]:
     return sorted(paths)
 
 
+def _cwd_tokens(cwd: str) -> list[str]:
+    """Focus candidates from the session's directory, most specific first:
+    the directory basename, then the origin remote's repo name. NO LLM."""
+    tokens: list[str] = []
+    base = slugify(Path(cwd).name)
+    if base:
+        tokens.append(base)
+    remote = _git(Path(cwd), "remote", "get-url", "origin")
+    if remote and remote.returncode == 0 and remote.stdout.strip():
+        name = remote.stdout.strip().rstrip("/").rsplit("/", 1)[-1]
+        name = name.rsplit(":", 1)[-1]  # scp-style git@host:repo with no slash
+        name = name.removesuffix(".git")
+        slug = slugify(name)
+        if slug and slug not in tokens:
+            tokens.append(slug)
+    return tokens
+
+
+def _load_entities(data_dir: Path) -> dict[str, dict[str, Any]]:
+    path = data_dir / "state" / "entities.json"
+    if path.is_file():
+        try:
+            entities = json.loads(path.read_text(encoding="utf-8")).get("entities", {})
+            if isinstance(entities, dict) and entities:
+                return entities
+        except (json.JSONDecodeError, OSError):
+            pass
+    # no derived state yet — fall back to project note filenames
+    projects = data_dir / "notes" / "projects"
+    if not projects.is_dir():
+        return {}
+    return {
+        p.stem: {"type": "project", "aliases": [], "path": f"notes/projects/{p.name}"}
+        for p in sorted(projects.glob("*.md"))
+    }
+
+
+def _match_focus(tokens: list[str], data_dir: Path) -> tuple[str, str] | None:
+    """(slug, note relpath) the session's cwd points at, or None. Deterministic:
+    projects beat other entity types; exact slug beats alias beats containment;
+    containment needs >= 4 chars on the shorter side (kills 'api'-grade noise)."""
+    entities = _load_entities(data_dir)
+    if not tokens or not entities:
+        return None
+    projects = {s: e for s, e in entities.items() if e.get("type") == "project"}
+    for pool in (projects, entities):
+        for token in tokens:
+            if token in pool:
+                return token, str(pool[token].get("path", ""))
+            for slug in sorted(pool):
+                aliases = pool[slug].get("aliases") or []
+                if any(slugify(str(a)) == token for a in aliases):
+                    return slug, str(pool[slug].get("path", ""))
+            contains = sorted(
+                (
+                    slug
+                    for slug in pool
+                    if min(len(slug), len(token)) >= 4 and (token in slug or slug in token)
+                ),
+                key=lambda s: (-len(s), s),
+            )
+            if contains:
+                return contains[0], str(pool[contains[0]].get("path", ""))
+    return None
+
+
 def _fresh_daily_brief(data_dir: Path, now: datetime) -> Path | None:
     briefs = data_dir / "state" / "briefs"
     if not briefs.is_dir():
@@ -148,9 +215,17 @@ def _unsynced_captures(data_dir: Path) -> int:
 
 
 def build_brief(
-    data_dir: Path, now: datetime | None = None, budget: int = BRIEF_CHAR_BUDGET
+    data_dir: Path,
+    now: datetime | None = None,
+    budget: int = BRIEF_CHAR_BUDGET,
+    cwd: str | None = None,
 ) -> str | None:
-    """Render the brief, or None when there is nothing worth injecting."""
+    """Render the brief, or None when there is nothing worth injecting.
+
+    With a cwd, sections are re-ranked around the project the session is in
+    (D14) — deterministically; without one (or without a match) the output is
+    byte-identical to the unranked brief.
+    """
     now = now or datetime.now().astimezone()
     today = now.date()
     generated, loops = _open_loops(data_dir)
@@ -158,13 +233,19 @@ def build_brief(
     notes = _recent_notes(data_dir, today)
     if not loops and not captures and not notes:
         return None
+    focus = _match_focus(_cwd_tokens(cwd), data_dir) if cwd else None
 
     lines: list[str] = ["# jotd brief (auto-injected at session start)"]
     bits = _header_bits(data_dir, generated)
+    if focus:
+        bits.insert(0, f"focus: {focus[0]} ({focus[1]})")
     if bits:
         lines.append("_" + " · ".join(bits) + "_")
 
     if loops:
+        if focus:
+            # stable: focus-note loops float as a block, stale-first kept within tiers
+            loops.sort(key=lambda lp: lp.get("note") != focus[1])
         shown = loops[:MAX_LOOPS]
         lines += ["", f"## Open loops ({len(loops)} open, top {len(shown)})"]
         for lp in shown:
@@ -175,18 +256,37 @@ def build_brief(
             )
 
     if captures:
+        focus_ids: set[str] = set()
+        if focus:
+            focus_ids = {
+                cap_id
+                for cap_id, routed in inbox.processed_entries(data_dir).items()
+                if focus[1] in routed
+            }
         by_author: dict[str, list[dict[str, Any]]] = {}
         for r in captures:
             by_author.setdefault(str(r.get("author", "unknown")), []).append(r)
         lines += ["", f"## Captured in the last {RECENT_DAYS} days"]
         for who in sorted(by_author):
             recs = by_author[who]
+            chosen = recs[-SNIPPETS_PER_AUTHOR:]
+            if focus_ids and any(r["id"] in focus_ids for r in recs):
+                # captures routed to the focus note displace the newest-3 default
+                preferred = [r for r in recs if r["id"] in focus_ids][-SNIPPETS_PER_AUTHOR:]
+                rest = [r for r in recs if r["id"] not in focus_ids]
+                k = SNIPPETS_PER_AUTHOR - len(preferred)
+                chosen = sorted(
+                    preferred + (rest[-k:] if k > 0 else []),
+                    key=lambda r: str(r.get("ts", "")),
+                )
             lines.append(f"- **{who}** ({len(recs)}):")
-            for r in recs[-SNIPPETS_PER_AUTHOR:]:
+            for r in chosen:
                 snippet = " ".join(str(r.get("text", "")).split())[:SNIPPET_CHARS]
                 lines.append(f"  - {snippet}")
 
     if notes:
+        if focus:
+            notes.sort(key=lambda p: p != focus[1])  # stable: matched note first
         lines += ["", f"## Notes touched in the last {RECENT_DAYS} days"]
         lines += [f"- {p}" for p in notes[:MAX_NOTES]]
 
@@ -233,7 +333,7 @@ def run_session_start(payload: dict[str, Any]) -> str | None:
         _log(data_dir, session_id, "skip", "session in the jotd directory itself")
         return None
 
-    brief = build_brief(data_dir)
+    brief = build_brief(data_dir, cwd=cwd or None)
     if brief is None:
         _log(data_dir, session_id, "skip", "nothing to brief")
         return None

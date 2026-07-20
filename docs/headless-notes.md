@@ -24,7 +24,19 @@ the fallback is an `ANTHROPIC_API_KEY` entry in the plist's `EnvironmentVariable
 deliberately not the default (keychain auth means no key sitting in a plist on disk).
 
 launchd does not run missed `StartCalendarInterval` jobs when the lid was closed; the next
-slot catches up. The pulse is stateless per run, so this degrades gracefully.
+slot catches up. The pulse is stateless per run, so this degrades gracefully. The auto-sync
+job uses `StartInterval` instead: missed ticks are likewise skipped, the next fires after
+wake, and one fires ~interval after bootstrap — a free sync-on-login.
+
+## Auto-organize trust prerequisite
+
+The backlog-triggered headless `/organize` (`jotd sync --auto` on the librarian machine,
+D13) needs BOTH grant paths: the three `Bash(jotd …)` commands ride `--allowedTools` flags
+(honored regardless of trust), but the librarian subagent's Edit/Write on notes flows
+through `--permission-mode acceptEdits`, which needs the data dir **trusted interactively
+once** — the same day-0 step the pulse already requires. A sync-only setup that skipped
+that step will see every auto-organize fail (and cool down); run `claude` in the data dir
+once and accept the dialog.
 
 ## Notifications
 
@@ -46,3 +58,12 @@ slot catches up. The pulse is stateless per run, so this degrades gracefully.
 2. `state/logs/pulse-<slot>.log` — launchd stdout/stderr of the runner itself.
 3. `state/pulse-log.md` — heartbeats with `status=error err="..."` carry the exception.
 4. `jotd pulse --now --dry-run` — full decision cycle, nothing sent, printed to stdout.
+
+## Debugging a silent auto-sync
+
+1. `jotd status` — `last auto-sync:` line plus a WARNING while a conflict marker exists.
+2. `state/logs/sync-auto.log` — one structured line per tick (`ok`, `skip`, `conflict`,
+   `organize-ok`, `organize-error`, `organize-skip`, `guard`, `recovered`) AND the plist's
+   stdout/stderr redirect, so interpreter tracebacks interleave in the same file.
+3. `launchctl print gui/$UID/com.jotd.sync.auto` — is the job loaded at all?
+4. A failed organize writes `state/logs/organize.cooldown` (4h); delete it to retry now.
