@@ -35,7 +35,7 @@ Everything lives in plain files under a jotd directory (default `~/jotd`):
 ```
 ~/jotd/
   jotd.toml                    # config: budgets, model, slot times
-  inbox/YYYY-MM.jsonl          # append-only raw captures, one JSON line each
+  inbox/YYYY-MM[.<author>].jsonl   # append-only raw captures, one JSON line each
   notes/{people,projects,topics,meetings,journal}/<slug>.md   # your notes
   state/                       # DERIVED from notes + logs (open-loops, entities, pulse-log, briefs)
   .claude/{agents,commands,settings.json}   # the Claude Code agents + permission rules
@@ -71,6 +71,7 @@ osascript -e 'display notification "test" with title "jotd"'   # approve the mac
 jotd schedule install            # install the 3×/day pulse (launchd)
 jotd install claude-code         # optional: /jotd:session in every Claude Code session
                                  #   add --hook to auto-capture sessions when they end
+                                 #   and inject a team brief when they start
 ```
 
 Two manual gates matter — each silently breaks the pulse if skipped:
@@ -134,6 +135,33 @@ jotd pulse --now --dry-run       # decide, print what it would do, send/log noth
 | `/recall <question>` | Answer from your notes, with citations |
 | `/jotd:session` | Distill the current session into captures (global — works in any repo) |
 
+## Team mode
+
+Point two (or a few) machines at one shared jotd directory backed by a private git repo and
+it becomes a shared brain: every capture carries an author, machines sync over plain git, one
+machine organizes, and every new Claude Code session on every machine starts with an injected
+brief of what the team knows. No server, no accounts.
+
+- **Inbox: multi-writer.** Each machine appends to its own `inbox/YYYY-MM.<author>.jsonl`, so
+  concurrent captures never conflict under git. Author identity resolves per machine:
+  `--author` > `$JOTD_AUTHOR` > `~/.config/jotd/author` > git `user.name` > OS user.
+- **Everything else: single-writer.** One machine — the **librarian** (set `[team] librarian`
+  in `jotd.toml`) — runs `/organize`, `jotd derive`, and the pulse. State-writing commands
+  refuse to run elsewhere. `jotd done <id>` still works anywhere: on a non-librarian machine it
+  flips the note checkbox, which syncs and folds into state at the librarian's next derive.
+- **Read: everywhere.** The SessionStart hook injects a deterministic brief (open loops with
+  owners, who captured what recently, notes touched) into every new session, on any machine.
+
+```bash
+jotd whoami                      # print this machine's author slug and how it resolved
+jotd sync                        # commit → pull --rebase → (librarian: derive) → push
+jotd sync --no-derive            # skip the librarian's auto-derive on this sync
+```
+
+`jotd sync` never auto-merges your notes: on a rebase conflict it aborts and leaves your
+commits safe locally for you to resolve by hand. See [docs/team.md](docs/team.md) for the
+full two-machine setup.
+
 ## Concepts
 
 - **capture / inbox** — a raw fragment appended to an append-only JSONL inbox; never edited.
@@ -142,6 +170,9 @@ jotd pulse --now --dry-run       # decide, print what it would do, send/log noth
 - **interruption budget** — a hard cap on nudges (default 3/run, 6/day), enforced in code.
 - **suppression** — a candidate the pulse chose *not* to surface, logged with its reason.
 - **daily brief** — the morning-slot summary of "worth knowing" items (`jotd log --brief`).
+- **author** — the per-machine slug stamped on each capture; scopes the inbox file so machines
+  never collide (team mode).
+- **librarian** — the single machine authorized to organize, derive, and pulse for a shared dir.
 
 ## Trust rules (non-negotiable)
 
